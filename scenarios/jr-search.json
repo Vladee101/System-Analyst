@@ -1,0 +1,670 @@
+{
+  "scenario_id": "jr-search",
+  "title": "Поиск и автодополнение в интернет-магазине",
+  "level": "junior",
+  "pack": "core",
+  "description": "Пользователи жалуются, что поиск в магазине работает плохо: не находит по частичному совпадению, нет подсказок при вводе. Нужно спроектировать нормальный поиск с автодополнением.",
+  "skills_tracked": [
+    "stakeholder_communication",
+    "scope_control",
+    "requirement_quality",
+    "nfr_awareness",
+    "diagram_accuracy"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Входящая заявка",
+      "context": "Продакт пишет: «Поиск — катастрофа. Пользователь вводит «кроссовки найк» — ничего не находит, потому что в каталоге «Nike кроссовки беговые». Нужен нормальный поиск с подсказками, как в Google. Каталог — 45 000 товаров.»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Уточнить: что значит «нормальный поиск»? Нужен ли fuzzy-поиск (с опечатками)? Автодополнение при вводе? Поиск по каким полям (название, описание, категория, бренд)? Какая допустимая задержка?",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1.5,
+            "requirement_quality": 1
+          },
+          "sets_flags": [
+            "full_interview"
+          ],
+          "feedback": "Верно. «Нормальный поиск» — субъективно. Нужно декомпозировать: полнотекстовый поиск, fuzzy matching, автодополнение — это три разных фичи с разной сложностью.",
+          "timeline_event": "Проведено интервью по требованиям к поиску",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c2",
+          "text": "Подключить Elasticsearch и настроить полнотекстовый поиск — стандартное решение, ничего уточнять не нужно.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1,
+            "scope_control": -0.5
+          },
+          "sets_flags": [
+            "skipped_interview"
+          ],
+          "feedback": "Вы перешли к решению до понимания требований. Elasticsearch — технология, а не требование. Может быть, бизнесу достаточно PostgreSQL full-text search. Без требований вы overengineering или underengineering.",
+          "timeline_event": "Пропущено интервью — сразу выбрана технология",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_full",
+      "node_type": "multi_select",
+      "stage": "Интервью",
+      "context": "На встрече с продактом и UX-дизайнером. Каталог: 45 000 товаров, 200 брендов, 80 категорий. Средний запрос — 2 слова. Какие вопросы зададите?",
+      "context_artifact": null,
+      "requires_flags": [
+        "full_interview"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "Должен ли поиск обрабатывать опечатки? (например, «кросовки» → «кроссовки»)",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1.5,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [
+            "fuzzy_defined"
+          ],
+          "feedback": "Ключевой вопрос. Fuzzy search — отдельная сложность: стемминг, Левенштейн, n-граммы. Без него «кросовки» не найдёт «кроссовки» — а это 30%+ запросов с мобильного.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "С какой задержкой должны появляться подсказки автодополнения? Сколько подсказок показывать?",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "autocomplete_specs"
+          ],
+          "feedback": "Критично для UX. Подсказки должны появляться за < 200мс — иначе пользователь не чувствует «мгновенности». 5-8 подсказок — оптимально, больше — перегружает экран.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "По каким полям товара нужен поиск: только название, или также описание, бренд, артикул?",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1
+          },
+          "sets_flags": [
+            "fields_defined"
+          ],
+          "feedback": "Определяет индексацию. Поиск по описанию даёт релевантность, но увеличивает индекс в 5-10 раз. Артикул — точное совпадение, другой алгоритм.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c4",
+          "text": "Нужна ли фильтрация результатов поиска (по цене, бренду, наличию)?",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5,
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Хороший вопрос. Фасетная фильтрация результатов — стандарт для e-commerce, но это дополнительная сложность. Лучше определить сейчас.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c5",
+          "text": "Какую поисковую систему использовать — Elasticsearch, Algolia или Meilisearch?",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5,
+            "scope_control": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Выбор технологии — решение архитектора на основе ваших требований. Продакт не знает и не должен знать разницу между Elasticsearch и Meilisearch. Ваша задача — определить ЧТО, а не КАК.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_consequence",
+      "node_type": "single_choice",
+      "stage": "Последствие пропуска",
+      "context": "Вы сразу подключили Elasticsearch с полнотекстовым поиском. На демо продакт говорит: «А подсказки при вводе? Я хочу как в Google — начинаю печатать и вижу варианты. Этого нет.»",
+      "context_artifact": null,
+      "requires_flags": [
+        "skipped_interview"
+      ],
+      "excludes": [
+        "step_2_full"
+      ],
+      "choices": [
+        {
+          "id": "s2c_c1",
+          "text": "Признать пробел — автодополнение не было в требованиях. Собрать детали: задержка, количество подсказок, поиск по началу слова или по любой части.",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 0.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "autocomplete_specs_late"
+          ],
+          "feedback": "Правильно, но потеряно время. Автодополнение — отдельный эндпоинт с другими требованиями к latency. Если бы спросили сразу — архитектура учитывала бы это.",
+          "timeline_event": "Пришлось доделывать автодополнение — не было в спеке",
+          "correct_rank": null
+        },
+        {
+          "id": "s2c_c2",
+          "text": "Использовать тот же полнотекстовый поиск для подсказок — просто показывать результаты по мере ввода.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Полнотекстовый поиск по 45 000 товаров на каждое нажатие клавиши — это 5-10 запросов в секунду на пользователя. Автодополнение требует отдельный лёгкий индекс (prefix search), а не полноценный full-text query.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "multi_select",
+      "stage": "Функциональные требования",
+      "context": "Пора писать ФТ. Вы знаете: нужен полнотекстовый поиск с fuzzy matching, автодополнение при вводе (< 200мс, 5-8 подсказок), поиск по названию + описанию + бренду. Какие ФТ включите?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "ФТ-1: Система должна выполнять полнотекстовый поиск по полям: название товара, описание, бренд. Результаты ранжируются по релевантности.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1
+          },
+          "sets_flags": [],
+          "feedback": "Базовое ФТ. Указаны конкретные поля и принцип ранжирования. Разработчик знает, что индексировать.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "ФТ-2: Поиск должен обрабатывать опечатки и морфологию (fuzzy matching). «кросовки найк» должен находить «Nike кроссовки беговые».",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1.5
+          },
+          "sets_flags": [],
+          "feedback": "Отличное ФТ. Конкретный пример входа/выхода — разработчик точно понимает ожидаемое поведение. Fuzzy matching и морфология чётко указаны.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "ФТ-3: При вводе текста в поле поиска система должна показывать до 7 подсказок автодополнения, обновляемых после каждого введённого символа.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Хорошее ФТ с конкретным числом подсказок. Уточнение: обновление после каждого символа с debounce 150-300мс, чтобы не перегружать сервер.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c4",
+          "text": "ФТ-4: При отсутствии результатов система должна показать «Ничего не найдено» и предложить похожие запросы (did you mean).",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Важный UX-сценарий. Пустой результат — не тупик, а возможность помочь. «Возможно, вы имели в виду...» удерживает пользователя.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c5",
+          "text": "ФТ-5: Система должна поддерживать голосовой поиск через микрофон.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1
+          },
+          "sets_flags": [
+            "scope_creep_voice"
+          ],
+          "feedback": "Scope creep. Голосовой поиск — отдельный проект: распознавание речи (API), обработка шума, мультиязычность. Это Phase 3 в лучшем случае.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c6",
+          "text": "ФТ-6: Система должна сохранять историю поисковых запросов пользователя и показывать недавние запросы.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Полезное UX-требование. Недавние запросы — быстрый способ повторить поиск. Хранится на клиенте, не требует серверной логики.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "Нефункциональные требования",
+      "context": "Бэкенд-лид спрашивает: «Какую latency закладывать? Автодополнение и полный поиск — это разные нагрузки.» Каталог: 45 000 товаров, 2000 уникальных поисков/день, пик — 50 одновременных пользователей.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "НФТ: автодополнение — ответ за < 150мс (пользователь не должен замечать задержку). Полнотекстовый поиск — ответ за < 500мс для 45 000 товаров. Debounce на клиенте: 200мс (не отправлять запрос на каждый символ). Индекс обновляется в течение 5 минут после изменения товара.",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1.5,
+            "requirement_quality": 1
+          },
+          "sets_flags": [
+            "nfr_solid"
+          ],
+          "feedback": "Образцовые НФТ. Разделение latency для двух типов запросов (autocomplete vs full search), debounce для оптимизации нагрузки, и freshness индекса. Команда точно знает, какие бенчмарки ставить.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "НФТ: поиск должен быть мгновенным.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1
+          },
+          "sets_flags": [
+            "nfr_vague"
+          ],
+          "feedback": "«Мгновенный» — не метрика. 150мс воспринимается как мгновенный, 500мс — как быстрый, 2 секунды — как медленный. Без цифр разработчик не знает, хватит ли PostgreSQL или нужен Elasticsearch.",
+          "timeline_event": "Написаны размытые НФТ для поиска",
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c3",
+          "text": "НФТ: поиск за < 10мс, автодополнение за < 5мс, поддержка 1 млн товаров и 10 000 одновременных запросов.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -0.5,
+            "scope_control": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Over-engineered. 10мс на полнотекстовый поиск по 45 000 товаров — нереалистично даже для Elasticsearch. 10 000 одновременных запросов при 50 пользователях — 200-кратный запас. Это приведёт к дорогому решению без необходимости.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "single_choice",
+      "stage": "Ревью sequence-диаграммы",
+      "context": "Коллега нарисовал sequence-диаграмму для автодополнения. Найдите проблему.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "sequenceDiagram\n    participant U as Пользователь\n    participant F as Фронтенд\n    participant B as Бэкенд\n    participant S as Поисковый индекс\n    U->>F: Ввод символа\n    F->>B: GET /autocomplete?q=кро\n    B->>S: Prefix query\n    S-->>B: Результаты\n    B-->>F: JSON подсказки\n    F-->>U: Отобразить dropdown"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "Нет debounce на фронтенде: запрос отправляется на КАЖДЫЙ символ. При вводе «кроссовки» (9 символов) — 9 запросов за 2 секунды. Нужен debounce 200мс и отмена предыдущего запроса при новом вводе (cancel/abort).",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "nfr_awareness": 1
+          },
+          "sets_flags": [
+            "sequence_fixed"
+          ],
+          "feedback": "Верно. Без debounce: 50 пользователей × 9 символов = 450 запросов за 2 секунды. С debounce 200мс: 50 × 2 = 100 запросов. Плюс cancel предыдущего — иначе ответы приходят в неправильном порядке (race condition).",
+          "timeline_event": "Исправлена sequence-диаграмма: добавлен debounce и отмена запросов",
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c2",
+          "text": "Не хватает кеширования результатов на фронте.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Кеширование — оптимизация, а не ошибка в потоке. Главная проблема — отсутствие debounce, которое генерирует лавину запросов на каждый символ.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c3",
+          "text": "Диаграмма корректна.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "missed_sequence_error"
+          ],
+          "feedback": "Вы пропустили отсутствие debounce. В продакшне это создаст лавину запросов, нагрузит сервер и может вызвать race condition (старый ответ перезапишет новый).",
+          "timeline_event": "Одобрена sequence-диаграмма без debounce — лавина запросов",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_6",
+      "node_type": "single_choice",
+      "stage": "Ревью BPMN",
+      "context": "Стажёр нарисовал BPMN для процесса полнотекстового поиска. Найдите ошибку.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Начало)) --> B[Ввести поисковый запрос]\n    B --> C[Отправить в поисковый индекс]\n    C --> D[Получить результаты]\n    D --> E[Показать список товаров]\n    E --> F((Конец))"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "Нет шлюза после «Получить результаты»: что если результатов 0? Нужен XOR: есть результаты → показать список, нет результатов → показать «Ничего не найдено» + «Возможно, вы имели в виду...» (did you mean).",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "bpmn_fixed"
+          ],
+          "feedback": "Верно. Пустой результат — один из самых частых сценариев поиска (опечатки, нестандартные запросы). Без отдельного пути пользователь видит пустую страницу без объяснения.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c2",
+          "text": "Не хватает шага «Валидация запроса» — нужно проверять на SQL injection.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Защита от injection — техническая деталь реализации (параметризованные запросы), а не бизнес-процесс. В BPMN моделируем поведение пользователя, а не серверную безопасность.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c3",
+          "text": "BPMN корректен.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "missed_bpmn_error"
+          ],
+          "feedback": "Вы пропустили отсутствие ветвления для пустого результата — самый частый альтернативный сценарий поиска.",
+          "timeline_event": "Одобрен BPMN поиска без обработки пустого результата",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_7",
+      "node_type": "single_choice",
+      "stage": "Ревью Use Case",
+      "context": "Вы написали Use Case для поиска товаров. Тимлид просит проверить.",
+      "context_artifact": {
+        "type": "table",
+        "data": {
+          "headers": [
+            "Поле",
+            "Значение"
+          ],
+          "rows": [
+            [
+              "Актор",
+              "Покупатель"
+            ],
+            [
+              "Предусловие",
+              "Покупатель на главной странице магазина"
+            ],
+            [
+              "Основной поток",
+              "1. Покупатель вводит запрос в поле поиска\n2. Система показывает подсказки автодополнения\n3. Покупатель выбирает подсказку или нажимает Enter\n4. Система отображает результаты, отсортированные по релевантности"
+            ],
+            [
+              "Альтернативный поток",
+              "???"
+            ],
+            [
+              "Постусловие",
+              "Покупатель видит список товаров, соответствующих запросу"
+            ]
+          ]
+        }
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s7_c1",
+          "text": "2а. Запрос короче 2 символов — система не отправляет запрос автодополнения (ждёт ввода). 4а. Результатов 0 — система показывает «Ничего не найдено» и предлагает похожие запросы.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 1
+          },
+          "sets_flags": [],
+          "feedback": "Оба альтернативных потока важны. Минимальная длина запроса — НФТ, предотвращающее бесполезные запросы к индексу (запрос «к» вернёт тысячи результатов). Пустой результат — ключевой UX-сценарий.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c2",
+          "text": "3а. Покупатель вводит артикул товара вместо текста — система показывает конкретный товар.",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Поиск по артикулу — хороший edge case, но не самый приоритетный альтернативный поток. Минимальная длина запроса и пустой результат критичнее для повседневного UX.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c3",
+          "text": "Альтернативных потоков нет — поиск всегда возвращает результат.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [],
+          "feedback": "Поиск «абвгдежзик» не вернёт результат. Поиск «к» вернёт 10 000 товаров. Оба случая — альтернативные потоки, которые нужно обрабатывать.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8",
+      "node_type": "single_choice",
+      "stage": "Защита скоупа",
+      "context": "Маркетолог на ревью: «А можно в поиске показывать не только товары, но и статьи из блога, рецепты, и FAQ? Единый поиск по всему сайту.»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s8_c1",
+          "text": "Зафиксировать как Phase 2. Единый поиск по разным типам контента (товары + статьи + FAQ) требует: мультииндексный поиск, разные ранжирования для разных типов, смешанную выдачу. MVP — поиск только по товарам.",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 1.5,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Идеальная защита скоупа. Каждый тип контента — отдельный индекс, отдельная релевантность, отдельная карточка результата. Универсальный поиск — это x3 по сложности.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c2",
+          "text": "Добавить — раз уже строим индекс, проиндексировать весь контент несложно.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1.5
+          },
+          "sets_flags": [
+            "scope_creep_universal"
+          ],
+          "feedback": "Scope creep. Проиндексировать — да, просто. Но смешать в одной выдаче товары по 5000 рублей и статью «как выбрать кроссовки» с правильным ранжированием — отдельная задача. Пользователь ищет товар, а видит FAQ.",
+          "timeline_event": "Принят scope creep — универсальный поиск по всему сайту",
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c3",
+          "text": "Сказать маркетологу, что блог и FAQ никто не читает.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1
+          },
+          "sets_flags": [],
+          "feedback": "Утверждение без данных. Маркетолог лучше знает, читают ли контент. Задача СА — не оценивать ценность контента, а управлять скоупом проекта.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_9_consequence",
+      "node_type": "single_choice",
+      "stage": "Отложенное последствие",
+      "context": "После релиза: мониторинг показывает 15 000 запросов автодополнения в минуту при 50 активных пользователях. Сервер поискового индекса загружен на 90%. Причина — нет debounce, каждый символ генерирует запрос.",
+      "context_artifact": null,
+      "requires_flags": [
+        "missed_sequence_error"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s9_c1",
+          "text": "Срочно добавить debounce 200мс на фронте + отмену предыдущего запроса. Это снизит нагрузку в 5-8 раз. Причина — пропущена ошибка в sequence-диаграмме.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Прямое последствие одобрения sequence-диаграммы без debounce на шаге 5. Фикс простой (2 строки на фронте), но потребовал hotfix-релиза.",
+          "timeline_event": "Перегрузка поискового индекса — отсутствие debounce (ошибка sequence-диаграммы)",
+          "correct_rank": null
+        },
+        {
+          "id": "s9_c2",
+          "text": "Масштабировать поисковый индекс — добавить ещё серверов.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1
+          },
+          "sets_flags": [],
+          "feedback": "Масштабирование решает симптом, а не причину. 15 000 запросов/мин от 50 пользователей — это архитектурная ошибка (нет debounce), а не проблема мощности. Добавление серверов — деньги на ветер.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_10",
+      "node_type": "ordering",
+      "stage": "Приоритизация бэклога",
+      "context": "Финальный шаг: расставьте задачи реализации в порядке приоритета.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s10_c1",
+          "text": "Полнотекстовый поиск по названию и описанию товара",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Полнотекстовый поиск — базовая функция, решающая главную боль пользователя.",
+          "timeline_event": null,
+          "correct_rank": 1
+        },
+        {
+          "id": "s10_c2",
+          "text": "Автодополнение с debounce (подсказки при вводе)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Автодополнение — ключевой UX-элемент, снижает количество полных запросов на 40%.",
+          "timeline_event": null,
+          "correct_rank": 2
+        },
+        {
+          "id": "s10_c3",
+          "text": "Fuzzy matching (обработка опечаток)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Fuzzy matching — без него «кросовки» не найдёт «кроссовки». Критично для мобильных пользователей.",
+          "timeline_event": null,
+          "correct_rank": 3
+        },
+        {
+          "id": "s10_c4",
+          "text": "Страница «Ничего не найдено» с did-you-mean",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Пустой результат + did-you-mean — удерживает пользователя вместо тупика.",
+          "timeline_event": null,
+          "correct_rank": 4
+        },
+        {
+          "id": "s10_c5",
+          "text": "История поисковых запросов пользователя",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "История запросов — удобство, но не критично. Хранится на клиенте, быстро добавить.",
+          "timeline_event": null,
+          "correct_rank": 5
+        }
+      ]
+    }
+  ]
+}

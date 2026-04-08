@@ -1,0 +1,575 @@
+{
+  "scenario_id": "jr-catalog-api",
+  "title": "REST API для каталога товаров",
+  "level": "junior",
+  "pack": "core",
+  "description": "Маркетплейс запускает мобильное приложение и нужен REST API для каталога товаров. Вам поручили собрать требования и проверить артефакты, подготовленные командой.",
+  "skills_tracked": [
+    "stakeholder_communication",
+    "scope_control",
+    "requirement_quality",
+    "nfr_awareness",
+    "diagram_accuracy"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Входящая заявка",
+      "context": "Продакт-менеджер пишет: «Нам нужен API для каталога товаров — мобильное приложение должно показывать список товаров, детали, категории и поиск. Бэкенд-команда ждёт спеку. Фронт хочет начать через неделю.»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Уточнить у продакта: какие атрибуты товара нужны? Есть ли фильтрация? Какой объём каталога? Нужна ли пагинация?",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1.5,
+            "requirement_quality": 1
+          },
+          "sets_flags": [
+            "full_interview"
+          ],
+          "feedback": "Верно. «Каталог товаров» — это широкое понятие. Без уточнений вы не знаете: сколько товаров, какие поля, нужна ли сортировка, какой формат изображений.",
+          "timeline_event": "Проведено интервью по требованиям каталога"
+        },
+        {
+          "id": "s1_c2",
+          "text": "Начать с REST-контракта: GET /products, GET /products/:id, GET /categories — стандартный CRUD, что тут уточнять.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [
+            "skipped_interview"
+          ],
+          "feedback": "Вы предполагаете, что знаете требования. А если каталог — 500 000 товаров и нужен полнотекстовый поиск с фасетной фильтрацией? Стандартный CRUD не справится.",
+          "timeline_event": "Пропущено интервью — предположили стандартный CRUD"
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_full",
+      "node_type": "multi_select",
+      "stage": "Интервью",
+      "context": "На встрече с продактом и мобильным разработчиком. Вы узнали: каталог — 15 000 товаров, 50 категорий, товары имеют фото. Какие ещё вопросы важны?",
+      "context_artifact": null,
+      "requires_flags": [
+        "full_interview"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "Нужна ли фильтрация по цене, рейтингу, наличию?",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [
+            "filters_defined"
+          ],
+          "feedback": "Ключевой вопрос для маркетплейса. Без фильтрации пользователи не найдут нужный товар в каталоге из 15 000.",
+          "timeline_event": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "Какой размер страницы пагинации предпочтителен для мобильного приложения?",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "pagination_defined"
+          ],
+          "feedback": "Отличный вопрос. Мобильное приложение обычно загружает по 20–30 товаров с infinite scroll. Важно для производительности.",
+          "timeline_event": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "Нужен ли полнотекстовый поиск или достаточно точного совпадения?",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [
+            "search_clarified"
+          ],
+          "feedback": "Важно. Полнотекстовый поиск (Elasticsearch) — это совсем другая архитектура, чем SQL LIKE. Нужно знать до проектирования.",
+          "timeline_event": null
+        },
+        {
+          "id": "s2_c4",
+          "text": "Какую СУБД использует бэкенд — PostgreSQL или MongoDB?",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Технический вопрос к бэкенд-команде, не к продакту. На этапе требований фокусируйтесь на «что», а не «как».",
+          "timeline_event": null
+        },
+        {
+          "id": "s2_c5",
+          "text": "Нужна ли мультиязычность каталога?",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5,
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Хороший вопрос для scope control. Если нужна — это влияет на структуру данных и API. Лучше узнать сейчас.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_consequence",
+      "node_type": "single_choice",
+      "stage": "Последствие пропуска",
+      "context": "Вы спроектировали простой CRUD без фильтрации. Мобильный разработчик на ревью: «А как мне показать только товары в наличии дешевле 5000 рублей? В API нет фильтров. Мне что, все 15 000 товаров загружать и фильтровать на клиенте?»",
+      "context_artifact": null,
+      "requires_flags": [
+        "skipped_interview"
+      ],
+      "excludes": [
+        "step_2_full"
+      ],
+      "choices": [
+        {
+          "id": "s2c_c1",
+          "text": "Признать пробел и добавить query-параметры фильтрации в API-контракт: ?min_price=&max_price=&in_stock=true&category_id=.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [
+            "filters_defined_late"
+          ],
+          "feedback": "Правильное исправление, но потеряно время. Бэкенд уже начал реализацию по вашей спеке без фильтров.",
+          "timeline_event": "Переделка API — пропущены фильтры при проектировании"
+        },
+        {
+          "id": "s2c_c2",
+          "text": "Предложить мобильной команде фильтровать на клиенте — данных не так много.",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -1,
+            "nfr_awareness": -1
+          },
+          "sets_flags": [],
+          "feedback": "15 000 товаров с фото — это десятки мегабайт. Загрузка всего каталога на мобильный клиент убьёт производительность и трафик пользователя.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "multi_select",
+      "stage": "Функциональные требования",
+      "context": "Пора писать ФТ для API каталога. Вы знаете: 15 000 товаров, 50 категорий, нужны фильтрация, поиск и пагинация. Какие ФТ включите?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "ФТ-1: API должен возвращать список товаров с пагинацией (limit/offset), поддерживая фильтрацию по категории, цене и наличию.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1.5
+          },
+          "sets_flags": [],
+          "feedback": "Ключевое ФТ. Объединяет пагинацию и фильтрацию в одном эндпоинте — правильный REST-подход.",
+          "timeline_event": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "ФТ-2: API должен возвращать детальную информацию о товаре по ID, включая описание, цену, фото, рейтинг и наличие.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1
+          },
+          "sets_flags": [],
+          "feedback": "Базовое ФТ для детальной страницы товара. Перечислены конкретные поля — разработчик знает контракт.",
+          "timeline_event": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "ФТ-3: API должен поддерживать текстовый поиск товаров по названию и описанию.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Важное ФТ. Без поиска пользователю придётся листать категории вручную.",
+          "timeline_event": null
+        },
+        {
+          "id": "s3_c4",
+          "text": "ФТ-4: API должен возвращать дерево категорий с количеством товаров в каждой.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Хорошее ФТ для навигации. Счётчик товаров помогает пользователю понять, где искать.",
+          "timeline_event": null
+        },
+        {
+          "id": "s3_c5",
+          "text": "ФТ-5: API должен позволять пользователям редактировать описания товаров.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Scope creep. Задача — API для просмотра каталога мобильным приложением. Редактирование — функционал админки, которая не в скоупе.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "Нефункциональные требования",
+      "context": "Мобильный разработчик спрашивает: «Какую скорость ответа API мне закладывать в UX? И как быть с картинками — они тяжёлые.» Каталог: 15 000 товаров, ожидаемая нагрузка: 1000 запросов/мин в пике.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "НФТ: GET /products — отклик < 500мс при 1000 запросах/мин. Изображения отдаются через CDN с поддержкой resize (thumbnail/full). API поддерживает ETag для клиентского кеширования.",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "nfr_solid"
+          ],
+          "feedback": "Конкретные метрики: латентность, throughput, стратегия для изображений, кеширование. Мобильная команда может планировать UX на основе этих цифр.",
+          "timeline_event": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "НФТ: API должен быть быстрым. Картинки — ответственность фронта.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1
+          },
+          "sets_flags": [
+            "nfr_vague"
+          ],
+          "feedback": "«Быстрый» — не метрика. А изображения — совместная ответственность: бэкенд должен предоставить URL нужного размера, а не заставлять мобильник скачивать full-size фото.",
+          "timeline_event": "Написаны размытые НФТ для API каталога"
+        },
+        {
+          "id": "s4_c3",
+          "text": "НФТ: API должен обрабатывать 100 000 запросов в секунду с географически распределённым кешем.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -0.5,
+            "scope_control": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Overengineered. 1000 запросов/мин — это ~17 в секунду. Закладывать 100K rps — это x6000 запас, который стоит как отдельный проект.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "single_choice",
+      "stage": "Ревью API-контракта",
+      "context": "Бэкенд-разработчик подготовил черновик эндпоинта списка товаров. Проверьте контракт.",
+      "context_artifact": {
+        "type": "table",
+        "data": {
+          "headers": [
+            "Метод",
+            "Путь",
+            "Параметры",
+            "Ответ"
+          ],
+          "rows": [
+            [
+              "GET",
+              "/api/products",
+              "page, limit",
+              "{ products: [...], total: number }"
+            ],
+            [
+              "GET",
+              "/api/products/:id",
+              "—",
+              "{ id, name, price, description, image_url }"
+            ],
+            [
+              "GET",
+              "/api/categories",
+              "—",
+              "{ categories: [...] }"
+            ]
+          ]
+        }
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "В GET /products нет параметров фильтрации (category_id, min_price, max_price, in_stock) и сортировки (sort_by, order). Также в ответе товара нет поля рейтинга и статуса наличия.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "api_reviewed"
+          ],
+          "feedback": "Верно. Контракт покрывает только базовый CRUD, но не фильтрацию и сортировку из требований. Пропущенные поля (rating, in_stock) нужны мобильному приложению для отображения.",
+          "timeline_event": null
+        },
+        {
+          "id": "s5_c2",
+          "text": "Нужно добавить POST /products для создания товаров.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Создание товаров — функция админки, не мобильного приложения покупателя. Это за пределами скоупа.",
+          "timeline_event": null
+        },
+        {
+          "id": "s5_c3",
+          "text": "Контракт полный, можно передавать в разработку.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Вы пропустили отсутствие фильтрации, сортировки и важных полей в ответе. Мобильная команда не сможет реализовать UI по этому контракту.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_6",
+      "node_type": "single_choice",
+      "stage": "Ревью BPMN",
+      "context": "Стажёр нарисовал BPMN для процесса поиска товара в мобильном приложении. Найдите ошибку.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Начало)) --> B[Ввести поисковый запрос]\n    B --> C[Отправить запрос в API]\n    C --> D[Показать результаты]\n    D --> E((Конец))"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "Нет шлюза после «Показать результаты»: что если результатов 0? Нужен XOR-gateway: есть результаты → список / нет результатов → показать «Ничего не найдено» с предложением изменить запрос.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "bpmn_fixed"
+          ],
+          "feedback": "Верно. Пустой результат поиска — один из самых частых сценариев. Без обработки пользователь увидит пустой экран.",
+          "timeline_event": null
+        },
+        {
+          "id": "s6_c2",
+          "text": "Не хватает шага «Валидация запроса» — нужно проверять длину поискового запроса.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Валидация длины — это деталь реализации, а не бизнес-процесс. В BPMN моделируем поведение, а не технические проверки.",
+          "timeline_event": null
+        },
+        {
+          "id": "s6_c3",
+          "text": "BPMN корректен.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "missed_bpmn_error"
+          ],
+          "feedback": "Вы пропустили отсутствие ветвления для пустого результата — критичный UX-сценарий.",
+          "timeline_event": "Одобрен BPMN без обработки пустого результата поиска"
+        }
+      ]
+    },
+    {
+      "node_id": "step_7",
+      "node_type": "single_choice",
+      "stage": "Защита скоупа",
+      "context": "Маркетолог подключается к обсуждению: «А можно добавить рекомендации — «с этим товаром покупают»? И персонализированную ленту на главной?»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s7_c1",
+          "text": "Зафиксировать как Phase 2. Рекомендательная система — отдельный проект с ML-пайплайном. В MVP каталога достаточно списка, поиска и фильтров.",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 1.5,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Идеальная защита скоупа. Рекомендации — это ML, сбор данных о поведении, A/B тесты. Это отдельная команда и отдельный квартал.",
+          "timeline_event": null
+        },
+        {
+          "id": "s7_c2",
+          "text": "Добавить простые рекомендации — «популярные товары в той же категории». Это несложно.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1
+          },
+          "sets_flags": [
+            "scope_creep"
+          ],
+          "feedback": "«Несложно» — ловушка. Нужен новый эндпоинт, логика ранжирования, кеширование, тесты. Каждое «несложное» добавление сдвигает дедлайн.",
+          "timeline_event": "Принят scope creep — добавлены рекомендации в MVP"
+        },
+        {
+          "id": "s7_c3",
+          "text": "Сказать маркетологу, что это не его зона ответственности.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1.5
+          },
+          "sets_flags": [],
+          "feedback": "Маркетолог — стейкхолдер продукта. Его вклад ценен, просто не всё входит в текущий спринт. Отвергать идеи стейкхолдеров — путь к конфликтам.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8",
+      "node_type": "single_choice",
+      "stage": "Ревью от тимлида",
+      "context": "Тимлид посмотрел вашу спецификацию и говорит: «Хорошо, но я не вижу одного важного для мобильного приложения аспекта. Что будет, если у пользователя пропал интернет посреди загрузки каталога?»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s8_c1",
+          "text": "Добавить НФТ: API должен поддерживать conditional requests (If-None-Match / ETag) для экономии трафика, и мобильное приложение должно кешировать последний успешный ответ для offline-просмотра.",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Для мобильного приложения offline-доступ и экономия трафика — ключевые НФТ. ETag позволяет не перезагружать данные, если они не изменились.",
+          "timeline_event": null
+        },
+        {
+          "id": "s8_c2",
+          "text": "Это проблема мобильной команды — пусть сами решают, как кешировать.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1,
+            "stakeholder_communication": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Кеширование — совместная ответственность. Без ETag/Last-Modified на стороне API мобильная команда не сможет эффективно кешировать. Это НФТ к API, не к клиенту.",
+          "timeline_event": null
+        },
+        {
+          "id": "s8_c3",
+          "text": "Добавить WebSocket для real-time обновлений каталога.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -0.5,
+            "nfr_awareness": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Overengineered. Каталог товаров обновляется раз в часы/дни, а не в реальном времени. WebSocket добавит сложность без пользы.",
+          "timeline_event": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_9",
+      "node_type": "ordering",
+      "stage": "Приоритизация бэклога",
+      "context": "Финальный шаг: расставьте эндпоинты API в порядке реализации.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s9_c1",
+          "text": "GET /products (список с пагинацией)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Список товаров — основной эндпоинт, от которого зависит вся навигация в приложении.",
+          "timeline_event": null,
+          "correct_rank": 1
+        },
+        {
+          "id": "s9_c2",
+          "text": "GET /products/:id (детали товара)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Детали товара — без него пользователь не может посмотреть описание и цену.",
+          "timeline_event": null,
+          "correct_rank": 2
+        },
+        {
+          "id": "s9_c3",
+          "text": "GET /categories (дерево категорий)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Категории — структура навигации, нужна для меню и фильтрации.",
+          "timeline_event": null,
+          "correct_rank": 3
+        },
+        {
+          "id": "s9_c4",
+          "text": "GET /products/search (текстовый поиск)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Поиск — важен, но пользователь может найти товар через категории. Поиск дополняет, а не заменяет навигацию.",
+          "timeline_event": null,
+          "correct_rank": 4
+        }
+      ]
+    }
+  ]
+}

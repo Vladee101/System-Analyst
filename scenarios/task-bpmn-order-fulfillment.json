@@ -1,0 +1,652 @@
+{
+  "scenario_id": "task-bpmn-order-fulfillment",
+  "title": "Задача: BPMN процесса обработки онлайн-заказа",
+  "level": "junior",
+  "pack": "core",
+  "description": "Вы в паре с бизнес-аналитиком строите BPMN-диаграмму процесса обработки онлайн-заказа: от оформления до доставки. Диаграмма развивается шаг за шагом.",
+  "skills_tracked": [
+    "diagram_accuracy",
+    "requirement_quality",
+    "stakeholder_communication",
+    "nfr_awareness",
+    "scope_control"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Начало: стартовое событие",
+      "context": "Бизнес-аналитик Марина говорит: «Давай начнём с самого начала — что запускает процесс обработки заказа? Какое стартовое событие на BPMN?»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Стартовое событие: «Клиент оформил заказ на сайте» (message start event — процесс запускается внешним действием).",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "good_start"
+          ],
+          "feedback": "Верно. Процесс обработки начинается не когда клиент кладёт товар в корзину, а когда оформляет заказ. Message start event показывает, что триггер — внешнее действие.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c2",
+          "text": "Стартовое событие: «Клиент зашёл на сайт» (обычный start event).",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [],
+          "feedback": "Слишком рано. Заход на сайт — это не начало обработки заказа. Тысячи людей заходят, но не покупают. Процесс стартует с конкретного бизнес-события — оформления заказа.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c3",
+          "text": "Стартовое событие: «Склад получил заявку на сборку».",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Это середина процесса, не начало. До склада есть оплата и проверка наличия. Вы пропустили несколько шагов.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2",
+      "node_type": "single_choice",
+      "stage": "Первый шаг: после оформления",
+      "context": "Марина: «Хорошо, заказ оформлен. Что происходит первым делом? Подумай — клиент нажал «Оплатить», но деньги ещё не списались.»\n\nТекущая диаграмма:",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Заказ оформлен)) --> B[???]"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "Следующий шаг: «Обработка платежа» — система отправляет запрос в платёжный шлюз.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "payment_step"
+          ],
+          "feedback": "Верно. Оплата — первый критический шаг. Пока платёж не прошёл, заказ не должен уходить на склад. Это точка, после которой бизнес берёт на себя обязательства.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "Следующий шаг: «Сборка заказа на складе».",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [],
+          "feedback": "Нельзя начинать сборку до получения оплаты. Если платёж не пройдёт — склад собрал заказ зря. Сначала деньги, потом действия.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "Следующий шаг: «Отправить email-подтверждение клиенту».",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Email-подтверждение важно, но оно идёт ПОСЛЕ успешной оплаты, а не до. Подтверждать нечего, пока деньги не списались.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "single_choice",
+      "stage": "Первый шлюз: результат оплаты",
+      "context": "Марина: «Платёж отправлен. Но ведь он может и не пройти — карта отклонена, недостаточно средств. Что ставим после «Обработка платежа»?»\n\nТекущая диаграмма:",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Заказ оформлен)) --> B[Обработка платежа]\n    B --> C{???}"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "XOR-шлюз (эксклюзивный): «Платёж успешен?» — Да → продолжить, Нет → уведомить клиента об ошибке → предложить повторить оплату или отменить заказ.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "gateway_correct"
+          ],
+          "feedback": "Верно. XOR-шлюз — ровно один выход активен. Ключевой момент: при неудаче не просто «ошибка», а конкретные действия — повторная попытка или отмена. Это два разных пути.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "Просто стрелка к следующему шагу — если платёж не прошёл, клиент сам разберётся.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [
+            "no_gateway"
+          ],
+          "feedback": "Нет шлюза = нет обработки ошибки. Клиент не «сам разберётся» — он увидит зависший заказ и уйдёт к конкуренту. BPMN обязана моделировать оба исхода.",
+          "timeline_event": "BPMN без обработки неудачной оплаты",
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "Parallel gateway: одновременно начать сборку и ждать результат оплаты.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1,
+            "nfr_awareness": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Опасно. Параллельная сборка до подтверждения оплаты — если платёж не пройдёт, склад работал зря. Это оправдано только в бизнесах с предоплатой или высоким trust-уровнем.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "Путь успеха: после оплаты",
+      "context": "Марина: «Отлично, платёж прошёл. Что дальше? У нас интернет-магазин, товары лежат на складе.»\n\nТекущая диаграмма:",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Заказ оформлен)) --> B[Обработка платежа]\n    B --> C{Платёж успешен?}\n    C -- Да --> D[???]\n    C -- Нет --> E[Уведомить клиента]\n    E --> F{Повторить?}\n    F -- Да --> B\n    F -- Нет --> G((Заказ отменён))"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "Параллельный шлюз (AND): одновременно начать «Сборку заказа на складе» и «Отправку email-подтверждения клиенту». Оба процесса независимы.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "parallel_correct"
+          ],
+          "feedback": "Верно. Сборка и email — независимые задачи. Email не ждёт сборки, сборка не ждёт email. Parallel gateway показывает, что они выполняются одновременно. Это ускоряет процесс.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "Последовательно: сначала email-подтверждение, потом сборка.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Работает, но неэффективно. Зачем склад ждёт, пока отправится email? Если email-сервер задержит письмо на 30 секунд — сборка тоже задержится. Параллельное выполнение — правильный паттерн.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c3",
+          "text": "Только сборка, email не нужен — клиент и так знает, что заказал.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "requirement_quality": -1
+          },
+          "sets_flags": [],
+          "feedback": "Email-подтверждение — обязательный бизнес-артефакт. Это юридическое подтверждение заказа с номером, составом и суммой. Без него клиент не может оспорить ошибку.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "single_choice",
+      "stage": "Сборка: что может пойти не так",
+      "context": "Марина: «Склад начинает сборку. Но бывает, что товара нет в наличии — пока клиент оформлял заказ, последнюю единицу купил кто-то другой. Как это отразить?»\n\nТекущая диаграмма:",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Заказ оформлен)) --> B[Обработка платежа]\n    B --> C{Платёж успешен?}\n    C -- Да --> P1[/Параллельно/]\n    P1 --> D[Сборка заказа]\n    P1 --> E[Email-подтверждение]\n    C -- Нет --> F[Уведомить клиента]\n    F --> G{Повторить?}\n    G -- Да --> B\n    G -- Нет --> H((Заказ отменён))\n    D --> I{???}"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "XOR-шлюз: «Все товары в наличии?» — Да → передать курьеру. Нет → уведомить клиента, предложить: ждать поставку, заменить товар, или вернуть деньги.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 1
+          },
+          "sets_flags": [
+            "stock_check_correct"
+          ],
+          "feedback": "Отлично. Три варианта при отсутствии товара — реальный бизнес-процесс. Просто «отменить» — потеря клиента. Предложить альтернативы — удержание. BPMN должен отражать реальные бизнес-решения.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c2",
+          "text": "Просто передать на доставку — склад всегда найдёт товар.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [
+            "no_stock_check"
+          ],
+          "feedback": "Наивное предположение. Out-of-stock — реальность e-commerce. Без обработки этого случая клиент будет ждать доставку бесконечно, а потом оставит негативный отзыв.",
+          "timeline_event": "BPMN без проверки наличия на складе",
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c3",
+          "text": "XOR-шлюз: «Товар есть?» — Да → доставка, Нет → автоматический возврат денег.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": 0.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Шлюз правильный, но автоматический возврат — слишком агрессивно. Может быть, клиент готов подождать день-два. Или хочет аналог. Бизнес хочет удержать заказ, а не отменять его.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_6",
+      "node_type": "single_choice",
+      "stage": "Передача курьеру",
+      "context": "Марина: «Заказ собран, передаём курьерской службе. Тут важный вопрос — кто кому передаёт информацию? Мы вызываем курьера или курьер забирает сам?»\n\nТекущая диаграмма (фрагмент):",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    D[Сборка заказа] --> I{Всё в наличии?}\n    I -- Да --> J[Передать курьеру]\n    J --> K[???]"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "Task «Создать заявку на доставку в LogiTrack API» → промежуточное событие «Курьер назначен» → task «Передать посылку курьеру». Моделируем как два шага с ожиданием.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Это не один шаг, а два: (1) отправить заявку через API, (2) дождаться назначения курьера и физически передать посылку. Между ними — ожидание, которое BPMN должен показать.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c2",
+          "text": "Один task: «Отправить заказ» — детали интеграции с курьером не нужны в BPMN.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Слишком абстрактно. «Отправить заказ» скрывает две разных операции: цифровую (API-запрос) и физическую (передача посылки). Разработчик не поймёт, что нужно интегрироваться с LogiTrack.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c3",
+          "text": "Subprocess: детальный процесс работы курьера — получил, едет, звонит клиенту, вручает.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "scope_control": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Слишком детально для НАШЕГО процесса. Маршрут курьера — внутренний процесс LogiTrack, а не наш. Мы моделируем до момента «передали курьеру», дальше — их зона ответственности.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_7",
+      "node_type": "single_choice",
+      "stage": "Ожидание доставки",
+      "context": "Марина: «Курьер забрал посылку. Теперь мы ждём результат — доставлено или нет. Как моделировать ожидание внешнего события в BPMN?»\n\nТекущая диаграмма (фрагмент):",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    J[Создать заявку в LogiTrack] --> K[Курьер назначен]\n    K --> L[Передать посылку]\n    L --> M{???}"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s7_c1",
+          "text": "Промежуточное событие-получение (intermediate catching event): «Ожидание callback от LogiTrack». Затем XOR-шлюз: доставлен / не доставлен / потерян.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [
+            "delivery_wait_correct"
+          ],
+          "feedback": "Верно. Intermediate catching event — правильный элемент BPMN для ожидания внешнего сигнала. И обязательно три исхода: успех, неудача (повторная доставка), и потеря (возврат денег).",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c2",
+          "text": "Просто task «Доставка клиенту» и стрелка к end event.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "no_delivery_handling"
+          ],
+          "feedback": "Вы предполагаете, что доставка всегда успешна. А если клиента нет дома? А если посылка потерялась? BPMN без обработки этих случаев — неполная модель.",
+          "timeline_event": "BPMN без обработки неудачной доставки",
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c3",
+          "text": "Timer event: ждать 3 дня, потом считать доставленным.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Произвольный таймаут — не замена реального подтверждения. Через 3 дня заказ может быть потерян, а вы пометили его как доставленный. Нужен callback от курьерской службы.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8",
+      "node_type": "single_choice",
+      "stage": "Финальный шаг: завершение",
+      "context": "Марина: «Заказ доставлен! Что ещё нужно сделать перед завершением процесса? Или просто ставим end event?»\n\nТекущая диаграмма (фрагмент):",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    M{Результат доставки?}\n    M -- Доставлен --> N[???]\n    N --> O((Заказ завершён))"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s8_c1",
+          "text": "Перед end event: параллельно «Отправить email с подтверждением доставки» и «Запросить оценку у клиента». Затем join и end event «Заказ завершён».",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Две финальных задачи: подтверждение доставки (юридический документ — «мы доставили, вот дата») и запрос оценки (бизнес-метрика — NPS, рейтинг). Параллельно, потому что независимы.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c2",
+          "text": "Сразу end event — доставили и всё.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Клиент не получит подтверждения доставки (нужно для спора с банком/маркетплейсом), а бизнес не получит обратной связи. Финализация — такой же важный этап, как и начало.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c3",
+          "text": "Task «Закрыть заказ в системе» и end event.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Системное закрытие — технический шаг, не бизнес-процесс. В BPMN важнее показать бизнес-действия: уведомление клиента и сбор обратной связи. «Закрыть в системе» — деталь реализации.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_9",
+      "node_type": "single_choice",
+      "stage": "Ревью: Марина проверяет",
+      "context": "Марина: «Давай посмотрим на диаграмму целиком. Я вижу одну проблему — мы не обработали таймаут. Что если LogiTrack вообще не отвечает?»\n\nПолная диаграмма:",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Заказ оформлен)) --> B[Обработка платежа]\n    B --> C{Платёж успешен?}\n    C -- Да --> P1[/Параллельно/]\n    P1 --> D[Сборка заказа]\n    P1 --> E[Email-подтверждение]\n    C -- Нет --> F[Уведомить об ошибке]\n    F --> G{Повторить?}\n    G -- Да --> B\n    G -- Нет --> H((Отменён))\n    D --> I{Всё в наличии?}\n    I -- Да --> J[Заявка в LogiTrack]\n    I -- Нет --> K[Предложить альтернативу]\n    J --> L[Передать курьеру]\n    L --> M{Callback от LogiTrack}\n    M -- Доставлен --> N[/Параллельно/]\n    N --> O[Email подтверждения]\n    N --> Q[Запросить оценку]\n    O --> R((Завершён))\n    M -- Не доставлен --> S[Повторная доставка]\n    S --> L"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s9_c1",
+          "text": "Добавить boundary timer event к «Ожидание callback»: если ответа нет 48 часов → эскалация в поддержку + polling LogiTrack API для проверки статуса.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "nfr_awareness": 1
+          },
+          "sets_flags": [
+            "timeout_added"
+          ],
+          "feedback": "Верно. Boundary timer event — правильный элемент BPMN для таймаутов. Без него заказ может зависнуть навсегда, если LogiTrack потеряет webhook. Эскалация + polling — надёжный fallback.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s9_c2",
+          "text": "Не нужно — LogiTrack гарантирует ответ в SLA.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "nfr_awareness": -1
+          },
+          "sets_flags": [
+            "no_timeout"
+          ],
+          "feedback": "Никогда не полагайтесь на SLA третьей стороны без fallback. SLA — это обещание, не гарантия. Webhook-и теряются, серверы падают. Ваш процесс должен быть устойчив.",
+          "timeline_event": "BPMN без обработки таймаута доставки",
+          "correct_rank": null
+        },
+        {
+          "id": "s9_c3",
+          "text": "Добавить timer event: через 7 дней автоматически закрыть заказ как доставленный.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Автозакрытие без подтверждения — опасно. Заказ может быть потерян, а система пометит его как доставленный. Нужна эскалация и проверка, а не автоматическое закрытие.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_10_consequence_no_gateway",
+      "node_type": "single_choice",
+      "stage": "Отложенное последствие",
+      "context": "Марина через неделю: «Помнишь, мы не добавили шлюз после оплаты? Сегодня клиент написал — оплата не прошла, но система отправила заказ на сборку. Склад собрал заказ, которого нет.»",
+      "context_artifact": null,
+      "requires_flags": [
+        "no_gateway"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s10_c1",
+          "text": "Добавить XOR-шлюз после оплаты и процесс отката: если платёж не прошёл — отменить сборку, уведомить клиента. Это ошибка из-за пропущенного шлюза в BPMN.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Прямое последствие отсутствия шлюза. Склад потратил время на сборку заказа, который не оплачен. Возврат товара на полки — лишняя работа и потенциальные ошибки инвентаризации.",
+          "timeline_event": "Склад собрал неоплаченный заказ — нет шлюза после оплаты в BPMN",
+          "correct_rank": null
+        },
+        {
+          "id": "s10_c2",
+          "text": "Это проблема платёжного шлюза, не BPMN.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Платёжный шлюз корректно отклонил платёж. Проблема — в вашем процессе: он не обрабатывает этот исход. BPMN должен моделировать все пути, включая ошибки.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_11_consequence_no_stock",
+      "node_type": "single_choice",
+      "stage": "Отложенное последствие",
+      "context": "Саппорт пишет: «Клиент ждёт заказ уже 10 дней. Мы проверили — товара нет на складе с момента оформления. Система не проверила наличие и ушла в вечное ожидание доставки.»",
+      "context_artifact": null,
+      "requires_flags": [
+        "no_stock_check"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s11_c1",
+          "text": "Добавить XOR-шлюз «Товар в наличии?» после сборки, с ветками: ожидание поставки, замена, возврат. Это ошибка из-за пропущенной проверки наличия в BPMN.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Клиент 10 дней ждал несуществующий товар. Если бы BPMN включал проверку наличия — клиента уведомили бы в день заказа, а не через полторы недели.",
+          "timeline_event": "Клиент ждал 10 дней — BPMN без проверки наличия товара",
+          "correct_rank": null
+        },
+        {
+          "id": "s11_c2",
+          "text": "Это проблема склада — они должны обновлять остатки в реальном времени.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Даже с real-time остатками race condition возможен (два заказа одновременно на последний товар). Процесс ДОЛЖЕН обрабатывать случай «товара нет». Это не проблема данных, а проблема процесса.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_12",
+      "node_type": "ordering",
+      "stage": "Итог: порядок элементов BPMN",
+      "context": "Марина: «Отличная работа! Финальный тест — расставь основные элементы процесса в правильном порядке.»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s12_c1",
+          "text": "Обработка платежа + XOR-шлюз результата",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Первый шаг — убедиться, что деньги получены. Без оплаты дальше двигаться нельзя.",
+          "timeline_event": null,
+          "correct_rank": 1
+        },
+        {
+          "id": "s12_c2",
+          "text": "Parallel: сборка заказа + email-подтверждение",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "После оплаты — параллельно: склад начинает сборку, клиент получает подтверждение.",
+          "timeline_event": null,
+          "correct_rank": 2
+        },
+        {
+          "id": "s12_c3",
+          "text": "Проверка наличия + XOR-шлюз",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "После сборки — проверяем, всё ли на месте. Если нет — альтернативные пути для клиента.",
+          "timeline_event": null,
+          "correct_rank": 3
+        },
+        {
+          "id": "s12_c4",
+          "text": "Передача курьеру + ожидание callback",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Создание заявки в LogiTrack, передача посылки, ожидание результата доставки с таймаутом.",
+          "timeline_event": null,
+          "correct_rank": 4
+        },
+        {
+          "id": "s12_c5",
+          "text": "Подтверждение доставки + запрос оценки",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Финализация: клиент получает подтверждение, бизнес получает обратную связь.",
+          "timeline_event": null,
+          "correct_rank": 5
+        }
+      ]
+    }
+  ]
+}

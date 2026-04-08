@@ -1,0 +1,675 @@
+{
+  "scenario_id": "jr-order-status",
+  "title": "Отслеживание статуса заказа",
+  "level": "junior",
+  "pack": "core",
+  "description": "Клиенты хотят видеть, где их заказ: оплачен, собирается, передан курьеру, доставлен. Нужно спроектировать жизненный цикл заказа и интеграцию с курьерской службой.",
+  "skills_tracked": [
+    "stakeholder_communication",
+    "scope_control",
+    "requirement_quality",
+    "nfr_awareness",
+    "diagram_accuracy"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Входящая заявка",
+      "context": "Продакт пишет: «Главная жалоба клиентов — не понимают, что с заказом после оплаты. Нужна страница отслеживания: текущий статус, история переходов, ориентировочное время доставки. Курьерская служба LogiTrack готова давать нам обновления.»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Уточнить: какие статусы проходит заказ? Как LogiTrack передаёт обновления — API, webhook, файл? Нужна ли push-нотификация при смене статуса?",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1.5,
+            "scope_control": 1
+          },
+          "sets_flags": [
+            "full_interview"
+          ],
+          "feedback": "Верно. Жизненный цикл заказа — ключевой бизнес-процесс. Нужно понять: сколько статусов, кто их меняет (склад, курьер, система), и как именно LogiTrack интегрируется.",
+          "timeline_event": "Проведено интервью по жизненному циклу заказа",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c2",
+          "text": "Стандартный набор: оплачен → в сборке → отправлен → доставлен. Начну рисовать диаграмму.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [
+            "skipped_interview"
+          ],
+          "feedback": "Вы предположили статусы. А если есть «частичная доставка»? Или «ожидает в пункте выдачи»? Или «возврат»? Без интервью вы пропустите реальные бизнес-сценарии.",
+          "timeline_event": "Пропущено интервью — статусы заказа додуманы",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_full",
+      "node_type": "multi_select",
+      "stage": "Интервью",
+      "context": "На встрече с продактом, складом и менеджером по логистике. Вы узнали: ~300 заказов/день, LogiTrack отправляет webhook при смене статуса доставки. Какие ещё вопросы зададите?",
+      "context_artifact": null,
+      "requires_flags": [
+        "full_interview"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "Какие статусы заказа существуют от оформления до завершения? Включая возвраты и отмены.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1.5,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [
+            "statuses_defined"
+          ],
+          "feedback": "Ключевой вопрос. Полный список статусов — основа для state-диаграммы. Важно включить не только happy path, но и отмену, возврат, потерю.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "Что делать, если LogiTrack не отправит webhook? Есть ли у них API для polling статуса?",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "fallback_discussed"
+          ],
+          "feedback": "Важный вопрос надёжности. Webhook-и теряются — нужен fallback. Если у LogiTrack есть GET /status, можно опрашивать заказы, по которым webhook не пришёл вовремя.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "Может ли заказ вернуться на предыдущий статус? (например, из «доставляется» обратно в «на складе»)",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [
+            "reverse_transitions_known"
+          ],
+          "feedback": "Отличный вопрос для state-диаграммы. Если курьер не застал получателя — заказ возвращается на склад. Без обратных переходов модель будет неполной.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c4",
+          "text": "Какой framework использует фронтенд для отображения трекинга?",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Технический вопрос к разработчикам, не к бизнесу. На этапе требований определяем «что показываем», а не «как рендерим».",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c5",
+          "text": "Нужна ли интеграция с картой — показывать геолокацию курьера в реальном времени?",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "map_discussed"
+          ],
+          "feedback": "Хороший вопрос для определения скоупа. Если да — это отдельный проект (real-time GPS, WebSocket). Если нет — достаточно текстовых статусов. Лучше узнать сейчас.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_short",
+      "node_type": "single_choice",
+      "stage": "Последствие пропуска",
+      "context": "Вы нарисовали линейную цепочку: оплачен → сборка → отправлен → доставлен. На ревью логист говорит: «А где статус «ожидает в пункте выдачи»? И что если курьер не застал — заказ возвращается на склад. Ваша диаграмма этого не покрывает.»",
+      "context_artifact": null,
+      "requires_flags": [
+        "skipped_interview"
+      ],
+      "excludes": [
+        "step_2_full"
+      ],
+      "choices": [
+        {
+          "id": "s2s_c1",
+          "text": "Назначить встречу с логистом для полного маппинга всех статусов и переходов, включая нестандартные.",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 0.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "statuses_defined_late"
+          ],
+          "feedback": "Правильно, но задержка. Если бы спросили на первом интервью — state-диаграмма была бы полной сразу.",
+          "timeline_event": "Пришлось переделывать диаграмму — пропущены нестандартные статусы",
+          "correct_rank": null
+        },
+        {
+          "id": "s2s_c2",
+          "text": "Быстро добавить два статуса и отправить в разработку.",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -1
+          },
+          "sets_flags": [],
+          "feedback": "«Быстро добавить» — рецепт для новых пробелов. Сколько ещё статусов вы пропустили? Возврат? Потеря посылки? Нужен полный маппинг.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "single_choice",
+      "stage": "Ревью state-диаграммы",
+      "context": "Вы знаете полный набор статусов. Коллега нарисовал state-диаграмму. Проверьте её.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "stateDiagram-v2\n    [*] --> created : Заказ оформлен\n    created --> paid : Оплата получена\n    paid --> assembling : Склад начал сборку\n    assembling --> shipped : Передан курьеру\n    shipped --> delivered : Доставлен\n    delivered --> [*]\n    created --> cancelled : Отменён клиентом\n    cancelled --> [*]"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "Не хватает: «shipped → awaiting_pickup» (ожидает в пункте выдачи), «shipped → returned_to_warehouse» (курьер не застал), и «delivered → return_requested» (возврат товара).",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "state_diagram_fixed"
+          ],
+          "feedback": "Верно. Три пропущенных ветки: пункт выдачи (самовывоз), неудачная доставка (возврат на склад), и возврат товара после получения. Без них система не покрывает реальные сценарии логистики.",
+          "timeline_event": "Исправлена state-диаграмма: добавлены пункт выдачи, возврат на склад, возврат товара",
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "Не хватает состояния «payment_pending» между created и paid.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Задача — отслеживание заказа ПОСЛЕ оплаты. Состояния до оплаты — другой процесс (checkout flow). Главные пробелы — в логистической части.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "Диаграмма полная — все ключевые состояния покрыты.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "missed_state_error"
+          ],
+          "feedback": "Вы пропустили три важных состояния: ожидание в пункте выдачи, возврат на склад при неудачной доставке, и возврат товара. Это реальные сценарии, которые происходят ежедневно.",
+          "timeline_event": "Одобрена неполная state-диаграмма — нет обработки возвратов и пункта выдачи",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "Ревью sequence-диаграммы",
+      "context": "Бэкенд-разработчик нарисовал sequence-диаграмму для обработки webhook от LogiTrack. Найдите проблему.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "sequenceDiagram\n    participant L as LogiTrack\n    participant B as Бэкенд\n    participant DB as База данных\n    participant U as Пользователь\n    L->>B: Webhook (order_id, new_status)\n    B->>DB: UPDATE order SET status = new_status\n    DB-->>B: OK\n    B->>U: Push-уведомление\n    B-->>L: 200 OK"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "Нет валидации перехода: бэкенд слепо принимает любой статус от LogiTrack. Нужна проверка — допустим ли переход из текущего статуса в новый (например, нельзя перейти из «delivered» в «assembling»).",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "sequence_fixed"
+          ],
+          "feedback": "Верно. Без валидации переходов баг в LogiTrack или дубликат webhook может откатить заказ в невалидное состояние. State machine на бэкенде должен проверять допустимость перехода.",
+          "timeline_event": "Исправлена sequence-диаграмма: добавлена валидация переходов",
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "Нужно отправлять email вместо push-уведомления.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Канал уведомления — дизайн-решение, а не ошибка диаграммы. Главная проблема — отсутствие валидации перехода статуса.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c3",
+          "text": "Диаграмма корректна.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "missed_sequence_error"
+          ],
+          "feedback": "Вы пропустили отсутствие валидации перехода. Без неё любой webhook может поставить любой статус — это нарушает целостность данных.",
+          "timeline_event": "Одобрена sequence-диаграмма без валидации переходов статуса",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "multi_select",
+      "stage": "Функциональные требования",
+      "context": "Пора писать ФТ. Полный набор статусов определён, LogiTrack шлёт webhook-и. Какие ФТ включите?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "ФТ-1: Система должна отображать текущий статус заказа и полную историю переходов с временными метками.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1
+          },
+          "sets_flags": [],
+          "feedback": "Базовое ФТ. История переходов важна: пользователь хочет видеть не только «где сейчас», но и «когда отправили», «сколько был на складе».",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c2",
+          "text": "ФТ-2: При получении webhook от LogiTrack система должна валидировать допустимость перехода в новый статус согласно state machine.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Критичное ФТ. Связывает state-диаграмму с реализацией — бэкенд отклоняет невалидные переходы.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c3",
+          "text": "ФТ-3: Система должна показывать ориентировочное время доставки на основе данных LogiTrack.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Хорошее UX-требование. Клиент хочет знать не только «где заказ», но и «когда приедет».",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c4",
+          "text": "ФТ-4: Система должна поддерживать отслеживание заказов от любого курьерского сервиса (DHL, FedEx, СДЭК).",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1
+          },
+          "sets_flags": [
+            "scope_creep_carriers"
+          ],
+          "feedback": "Scope creep. В задаче один партнёр — LogiTrack. Мультикурьерная поддержка — Phase 2. Каждый курьер — отдельный формат webhook, отдельная интеграция.",
+          "timeline_event": "Добавлена мультикурьерная поддержка в скоуп MVP",
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c5",
+          "text": "ФТ-5: При переходе заказа в статус «доставлен» система должна запросить у клиента оценку доставки (1-5 звёзд).",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Полезное ФТ для обратной связи. Но обсудите с продактом — это может быть Phase 2, если фокус MVP только на отслеживании.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_6",
+      "node_type": "single_choice",
+      "stage": "Нефункциональные требования",
+      "context": "Бэкенд-лид спрашивает: «Какой SLA на обработку webhook? И что если LogiTrack пришлёт дубль?» У вас 300 заказов/день, LogiTrack шлёт ~5 webhook-ов на заказ.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "НФТ: webhook обрабатывается за < 2 секунды. Идемпотентность по order_id + status + timestamp: повторный webhook с теми же данными не создаёт дубль в истории. Страница трекинга загружается за < 1 секунду.",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "nfr_solid"
+          ],
+          "feedback": "Конкретные метрики: латентность обработки webhook, идемпотентность (дубли LogiTrack не ломают данные), производительность UI. Команда знает, что строить.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c2",
+          "text": "НФТ: статусы должны обновляться быстро и без ошибок.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1
+          },
+          "sets_flags": [
+            "nfr_vague"
+          ],
+          "feedback": "Неизмеримо. «Быстро» — 100мс или 10 секунд? «Без ошибок» — при дубликатах что делать? НФТ без метрик не дают команде ориентиров.",
+          "timeline_event": "Написаны размытые НФТ",
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c3",
+          "text": "НФТ: real-time обновление через WebSocket с задержкой < 100мс, поддержка 100 000 одновременных подключений.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -0.5,
+            "scope_control": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Over-engineered. Статус заказа меняется раз в часы, не в миллисекунды. WebSocket с 100K подключений — это Netflix-level инфраструктура для 300 заказов/день.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_7",
+      "node_type": "single_choice",
+      "stage": "Ревью BPMN",
+      "context": "Стажёр нарисовал BPMN для процесса обработки статуса «курьер не застал получателя». Найдите ошибку.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Начало)) --> B[Курьер прибыл по адресу]\n    B --> C{Получатель на месте?}\n    C -- Да --> D[Вручить заказ]\n    D --> E((Конец))\n    C -- Нет --> F[Вернуть на склад]\n    F --> E"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s7_c1",
+          "text": "После «Нет» нужен промежуточный шаг: курьер оставляет уведомление и ждёт N часов. Только после повторной неудачной попытки — возврат на склад. Также нет шлюза: переадресовать в пункт выдачи или вернуть на склад?",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "bpmn_fixed"
+          ],
+          "feedback": "Верно. Мгновенный возврат при первой неудаче — плохой UX и лишние расходы на повторную доставку. Реальный процесс: попытка → уведомление → ожидание → повторная попытка или перенаправление в пункт выдачи.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c2",
+          "text": "Не хватает шага «Позвонить получателю» перед возвратом.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Звонок — деталь процесса курьера, которая может быть частью решения. Но главная ошибка — отсутствие повторной попытки и альтернативы (пункт выдачи).",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c3",
+          "text": "BPMN корректен.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "missed_bpmn_error"
+          ],
+          "feedback": "Мгновенный возврат без повторной попытки и без альтернативы (пункт выдачи) — это потеря денег на логистику и недовольный клиент.",
+          "timeline_event": "Одобрен BPMN с мгновенным возвратом при первой неудаче доставки",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8",
+      "node_type": "single_choice",
+      "stage": "Защита скоупа",
+      "context": "Логист на ревью: «А можно добавить карту с геолокацией курьера в реальном времени? Как у Яндекс.Еды — пользователь видит точку на карте.»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s8_c1",
+          "text": "Зафиксировать как Phase 2. Геотрекинг требует: WebSocket для real-time обновлений, интеграция с GPS курьера через LogiTrack, рендеринг карты в мобильном приложении. MVP — текстовые статусы с историей.",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 1.5,
+            "stakeholder_communication": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Идеальная защита скоупа. Вы объяснили конкретные технические причины почему это отдельный проект (WebSocket, GPS, карта) и предложили MVP-альтернативу.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c2",
+          "text": "Добавить — LogiTrack наверняка даёт координаты в webhook.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1.5
+          },
+          "sets_flags": [
+            "scope_creep_map"
+          ],
+          "feedback": "Scope creep. Даже если LogiTrack даёт координаты, real-time карта — это: WebSocket-соединение, обновления каждые 10 секунд, рендеринг карты, обработка offline. Это удваивает сложность.",
+          "timeline_event": "Принят scope creep — real-time карта добавлена в MVP",
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c3",
+          "text": "Отказать — карта бесполезна, никто ей не пользуется.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1
+          },
+          "sets_flags": [],
+          "feedback": "Субъективная оценка без данных. Геотрекинг — популярная фича в доставке. Задача СА — управлять приоритетами, а не отвергать идеи на основе личного мнения.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_9_consequence_state",
+      "node_type": "single_choice",
+      "stage": "Отложенное последствие",
+      "context": "Через три недели после релиза: клиент жалуется, что его заказ показывает статус «отправлен» уже 5 дней. Саппорт проверяет — LogiTrack давно доставил, но webhook не прошёл. В системе нет механизма проверки «зависших» заказов.",
+      "context_artifact": null,
+      "requires_flags": [
+        "missed_state_error"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s9_c1",
+          "text": "Реализовать scheduled job: раз в час проверять заказы в статусе «shipped» старше 48 часов через LogiTrack API. Обновлять статус, если LogiTrack уже доставил. Это следствие неполной state-диаграммы.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5,
+            "nfr_awareness": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Прямое последствие неполной state-диаграммы. Если бы в модели был таймер «shipped дольше 48ч → проверить через API», эта проблема не возникла бы.",
+          "timeline_event": "Заказ завис в «отправлен» на 5 дней — нет обработки потерянных webhook",
+          "correct_rank": null
+        },
+        {
+          "id": "s9_c2",
+          "text": "Попросить LogiTrack гарантировать доставку webhook.",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Webhook-и по определению fire-and-forget. Ни один провайдер не гарантирует 100% доставку. Ваша система должна иметь fallback — это ответственность потребителя.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_10_consequence_sequence",
+      "node_type": "single_choice",
+      "stage": "Отложенное последствие",
+      "context": "Баг в проде: LogiTrack прислал два webhook подряд — «delivered» и затем «shipped» (из-за задержки в их системе). Заказ откатился из «доставлен» обратно в «отправлен». Клиент в панике — думает, что заказ потеряли.",
+      "context_artifact": null,
+      "requires_flags": [
+        "missed_sequence_error"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s10_c1",
+          "text": "Добавить валидацию переходов в state machine: «delivered» → «shipped» — запрещённый переход. Отклонять webhook с невалидным переходом и логировать для расследования.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Прямое последствие одобрения sequence-диаграммы без валидации переходов. State machine на бэкенде должен быть арбитром — не все webhook-и от провайдера корректны.",
+          "timeline_event": "Заказ откатился из «доставлен» в «отправлен» — нет валидации переходов",
+          "correct_rank": null
+        },
+        {
+          "id": "s10_c2",
+          "text": "Всегда принимать последний webhook — LogiTrack лучше знает актуальный статус.",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5,
+            "nfr_awareness": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "LogiTrack не всегда прав — их система тоже имеет баги и задержки. Ваш state machine должен быть последней линией защиты целостности данных.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_11",
+      "node_type": "ordering",
+      "stage": "Приоритизация бэклога",
+      "context": "Финальный шаг: расставьте задачи в порядке реализации.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s11_c1",
+          "text": "State machine для статусов заказа + валидация переходов",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "State machine — ядро системы. Без валидации переходов данные будут некорректны.",
+          "timeline_event": null,
+          "correct_rank": 1
+        },
+        {
+          "id": "s11_c2",
+          "text": "Webhook-приёмник от LogiTrack с идемпотентностью",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Webhook-приёмник — без него нет данных от LogiTrack. Идемпотентность защищает от дублей.",
+          "timeline_event": null,
+          "correct_rank": 2
+        },
+        {
+          "id": "s11_c3",
+          "text": "Страница отслеживания (текущий статус + история)",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Страница трекинга — то, ради чего всё делается. Без неё пользователь не видит статус.",
+          "timeline_event": null,
+          "correct_rank": 3
+        },
+        {
+          "id": "s11_c4",
+          "text": "Push-уведомления при смене статуса",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Push-уведомления — проактивное информирование. Пользователю не нужно заходить на страницу.",
+          "timeline_event": null,
+          "correct_rank": 4
+        },
+        {
+          "id": "s11_c5",
+          "text": "Scheduled job для проверки зависших заказов",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Scheduled job — страховка от потерянных webhook. Важно, но редкий edge case.",
+          "timeline_event": null,
+          "correct_rank": 5
+        }
+      ]
+    }
+  ]
+}

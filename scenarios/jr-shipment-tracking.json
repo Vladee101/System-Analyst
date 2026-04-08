@@ -1,0 +1,299 @@
+{
+  "scenario_id": "jr-shipment-tracking",
+  "title": "Отслеживание статуса доставки заказа",
+  "level": "junior",
+  "pack": "logistics",
+  "description": "Добавление отображения статуса доставки заказа в личном кабинете клиента интернет-магазина через интеграцию с ShipFast API.",
+  "skills_tracked": [
+    "stakeholder_communication",
+    "scope_control",
+    "requirement_quality",
+    "nfr_awareness",
+    "diagram_accuracy"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Slack сообщение от продакта",
+      "context": "Продакт пишет:\n«Клиенты не понимают где их заказ после оплаты. Нужно показать статус доставки в личном кабинете.»\nТвое первое действие?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Уточнить источник статусов доставки",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1.2,
+            "requirement_quality": 0.8
+          },
+          "sets_flags": [
+            "status_source_clarified"
+          ],
+          "feedback": "Верно, потому что сначала нужно понять источник статусов.",
+          "timeline_event": "Уточнен источник статусов доставки.",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c2",
+          "text": "Добавить поле status в таблицу orders",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -1
+          },
+          "sets_flags": [
+            "guessed_model"
+          ],
+          "feedback": "Неверно, потому что нельзя менять модель данных без понимания источника.",
+          "timeline_event": "Модель данных изменена без уточнений.",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c3",
+          "text": "Передать задачу разработчикам",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1.2
+          },
+          "sets_flags": [],
+          "feedback": "Неверно, потому что требования еще не уточнены.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2",
+      "node_type": "single_choice",
+      "stage": "Уточнение интеграции",
+      "context": "Продакт отвечает:\n«Статусы приходят из ShipFast API.»\nЧто спросить дальше?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "Запросить список статусов ShipFast API",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1.3
+          },
+          "sets_flags": [
+            "statuses_requested"
+          ],
+          "feedback": "Верно, список статусов нужен для корректной спецификации.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "Предложить добавить карту курьера",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1.4
+          },
+          "sets_flags": [
+            "scope_creep_map"
+          ],
+          "feedback": "Неверно, это выходит за текущий scope задачи.",
+          "timeline_event": "Предложена карта вне scope.",
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "Сразу описать UI блок",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -0.8
+          },
+          "sets_flags": [],
+          "feedback": "Неверно, сначала нужно понять данные.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "single_choice",
+      "stage": "Scope creep",
+      "context": "Продакт предлагает:\n«Давай сразу покажем прогноз времени доставки (ETA).»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "Добавить ETA в текущий scope",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1.5
+          },
+          "sets_flags": [
+            "eta_scope_added"
+          ],
+          "feedback": "Неверно, ETA требует отдельной проработки.",
+          "timeline_event": "ETA добавлен без оценки.",
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "Предложить оформить отдельной задачей backlog",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 1.5
+          },
+          "sets_flags": [
+            "scope_protected"
+          ],
+          "feedback": "Верно, нужно защитить текущий scope.",
+          "timeline_event": "ETA вынесен в backlog.",
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "Игнорировать сообщение",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1
+          },
+          "sets_flags": [],
+          "feedback": "Неверно, нужно управлять ожиданиями.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "NFR вопрос",
+      "context": "Разработчик спрашивает:\n«Как часто обновлять статус?»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "Уточнить допустимую задержку отображения",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1.4
+          },
+          "sets_flags": [
+            "latency_defined"
+          ],
+          "feedback": "Верно, это NFR требование.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "Обновлять каждую секунду",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -1.2
+          },
+          "sets_flags": [],
+          "feedback": "Неверно, это может перегрузить API.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c3",
+          "text": "Пусть разработчики решат сами",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -0.7
+          },
+          "sets_flags": [],
+          "feedback": "Неверно, это бизнес‑решение.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "single_choice",
+      "stage": "Проверка sequence diagram",
+      "context": "Разработчик прислал sequence diagram интеграции ShipFast API. Найди проблему.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "sequenceDiagram\n    participant UI\n    participant Backend\n    participant ShipFast\n\n    UI->>Backend: Request status\n    Backend->>ShipFast: GET /status\n    ShipFast-->>Backend: status\n    Backend-->>UI: status"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "Отсутствует обработка ошибки ответа ShipFast API",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5
+          },
+          "sets_flags": [
+            "missed_error_if_wrong"
+          ],
+          "feedback": "Верно, отсутствует error path.",
+          "timeline_event": "Обнаружено отсутствие error path.",
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c2",
+          "text": "Диаграмма полностью корректна",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.4
+          },
+          "sets_flags": [
+            "error_path_missed"
+          ],
+          "feedback": "Неверно, отсутствует обработка ошибки.",
+          "timeline_event": "Ошибка обработки API пропущена.",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_6_error_consequence",
+      "node_type": "single_choice",
+      "stage": "Инцидент после релиза",
+      "context": "После релиза пользователи жалуются что статус иногда исчезает. Backend сообщает что ShipFast иногда возвращает ошибку.",
+      "context_artifact": null,
+      "requires_flags": [
+        "error_path_missed"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "Добавить fallback статус «Статус временно недоступен»",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1.1,
+            "diagram_accuracy": 0.9
+          },
+          "sets_flags": [],
+          "feedback": "Верно, fallback улучшает устойчивость системы.",
+          "timeline_event": "Добавлен fallback статус после инцидента.",
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c2",
+          "text": "Игнорировать жалобы пользователей",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1.2
+          },
+          "sets_flags": [],
+          "feedback": "Неверно, проблему нужно решать.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    }
+  ]
+}
