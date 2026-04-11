@@ -276,6 +276,10 @@ pub fn get_scenario_json(id: String) -> Result<String, String> {
 
 #[tauri::command]
 pub fn save_scenario(id: String, content: String) -> Result<(), String> {
+    // Validate that content is a valid Scenario JSON
+    let _scenario: crate::models::Scenario = serde_json::from_str(&content)
+        .map_err(|e| format!("Invalid scenario format: {}", e))?;
+
     let mut path = std::env::current_dir().map_err(|e| e.to_string())?;
 
     if path.ends_with("src-tauri") {

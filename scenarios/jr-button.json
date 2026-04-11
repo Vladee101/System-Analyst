@@ -1,0 +1,97 @@
+{
+  "scenario_id": "jr-button",
+  "title": "Добавление кнопки",
+  "level": "junior",
+  "pack": "core",
+  "description": "Простой пример для добавления кнопки по заказу.",
+  "skills_tracked": [
+    "requirement_quality",
+    "diagram_accuracy"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Начало",
+      "context": "Заказчик просит добавить кнопку. Что делаете?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Уточняю, какая кнопка и для чего.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "interviewed"
+          ],
+          "feedback": "Правильно — нужно понять контекст.",
+          "timeline_event": "Провели интервью"
+        },
+        {
+          "id": "s1_c2",
+          "text": "Добавляю кнопку «ОК» и отправляю в разработку.",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [
+            "implemented"
+          ],
+          "feedback": "Неверно — сначала нужно уточнить требования."
+        }
+      ]
+    },
+    {
+      "node_id": "step_2",
+      "node_type": "ordering",
+      "stage": "Разработка",
+      "context": "Разработчик создает кнопку по описанию.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "Кнопка создана и отложена в очередь.",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [
+            "queue_created"
+          ],
+          "feedback": "Правильно — детали зафиксированы."
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "single_choice",
+      "stage": "Валидация",
+      "context": "Система проверяет, что кнопка нужна.",
+      "context_artifact": null,
+      "requires_flags": [
+        "interviewed"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "Валидация пройдена — запуск в тестах.",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "test_started"
+          ],
+          "feedback": "Ошибки не обнаружены."
+        }
+      ]
+    }
+  ]
+}

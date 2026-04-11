@@ -26,7 +26,17 @@ export function MainLayout() {
 
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        setAlertModal({
+          type: 'error',
+          title: 'Ошибка JSON',
+          message: 'Файл не является корректным JSON-файлом.',
+        });
+        return;
+      }
 
       if (!data.scenario_id) {
         setAlertModal({
@@ -44,16 +54,15 @@ export function MainLayout() {
         message: `«${data.title || data.scenario_id}» успешно добавлен в список сценариев.`,
       });
       window.dispatchEvent(new CustomEvent('scenarioImported'));
-
-      // Reset input
-      e.target.value = '';
     } catch (err) {
       console.error("Failed to import scenario:", err);
       setAlertModal({
         type: 'error',
         title: 'Ошибка импорта',
-        message: 'Не удалось импортировать файл. Убедитесь, что это корректный JSON-файл сценария.',
+        message: typeof err === 'string' ? err : 'Не удалось импортировать файл. Убедитесь, что формат соответствует требованиям.',
       });
+    } finally {
+      e.target.value = '';
     }
   };
 
