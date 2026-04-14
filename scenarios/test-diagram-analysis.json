@@ -1,0 +1,68 @@
+{
+  "scenario_id": "test-diagram-analysis",
+  "title": "Test: Diagram Analysis",
+  "level": "Junior",
+  "pack": "testing",
+  "description": "Test diagram_analysis node type.",
+  "skills_tracked": ["diagram_accuracy"],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "diagram_analysis",
+      "stage": "Review BPMN",
+      "context": "Find the error in the diagram — click the problematic element.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "graph TD\n    A((Start)) --> B[Process Payment]\n    B --> C[Ship Order]\n    C --> D((End))"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "element_A",
+          "text": "Start",
+          "correct": false,
+          "element_selector": "A",
+          "skill_effects": { "diagram_accuracy": 0 },
+          "sets_flags": [],
+          "feedback": "The start event is fine.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "element_B",
+          "text": "Process Payment",
+          "correct": true,
+          "element_selector": "B",
+          "skill_effects": { "diagram_accuracy": 1.0 },
+          "sets_flags": [],
+          "feedback": "Correct! A payment gateway decision is missing here.",
+          "timeline_event": "Identified workflow problem.",
+          "correct_rank": null
+        },
+        {
+          "id": "element_C",
+          "text": "Ship Order",
+          "correct": false,
+          "element_selector": "C",
+          "skill_effects": { "diagram_accuracy": 0 },
+          "sets_flags": [],
+          "feedback": "Shipping comes after payment — the error is earlier.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "element_D",
+          "text": "End",
+          "correct": false,
+          "element_selector": "D",
+          "skill_effects": { "diagram_accuracy": 0 },
+          "sets_flags": [],
+          "feedback": "The end event is fine.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    }
+  ]
+}

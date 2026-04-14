@@ -1,0 +1,51 @@
+{
+  "scenario_id": "test-drag-classification",
+  "title": "Test: Drag Classification",
+  "level": "Junior",
+  "pack": "testing",
+  "description": "Test drag_classification node type.",
+  "skills_tracked": ["traceability"],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "drag_classification",
+      "stage": "Requirements mapping",
+      "context": "Drag requirements to their correct bucket.",
+      "context_artifact": {
+        "type": "classification",
+        "data": {
+          "categories": [
+            { "id": "cat_api", "label": "API" },
+            { "id": "cat_db", "label": "DB" }
+          ]
+        }
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "item_1",
+          "text": "Store orders",
+          "correct": true,
+          "correct_category": "cat_db",
+          "skill_effects": { "traceability": 1.0 },
+          "sets_flags": [],
+          "feedback": "DB handles storage.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "item_2",
+          "text": "Validate Auth Payload",
+          "correct": true,
+          "correct_category": "cat_api",
+          "skill_effects": { "traceability": 1.0 },
+          "sets_flags": [],
+          "feedback": "API handles auth validation.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    }
+  ]
+}

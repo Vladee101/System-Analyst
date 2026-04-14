@@ -1,0 +1,636 @@
+{
+  "scenario_id": "jr-classdiagram-ecommerce",
+  "title": "Интернет-магазин: требования → Class Diagram",
+  "level": "junior",
+  "pack": "core",
+  "description": "Product owner описывает структуру данных интернет-магазина. Ваша задача — правильно определить классы, атрибуты, методы и типы связей, не перепутав composition с aggregation и не ошибившись в кратности.",
+  "skills_tracked": [
+    "stakeholder_communication",
+    "scope_control",
+    "requirement_quality",
+    "diagram_accuracy"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Входящая заявка",
+      "context": "Product owner Марина пишет в Slack:\n\n«Нам нужна Class Diagram для модуля заказов. Разработчики спорят о структуре: как связаны заказ, товар и корзина, что у них общее, что раздельное. Сделаешь диаграмму? Заодно хочу убедиться, что мы не забыли про скидки и адрес доставки».\n\nС чего начинаете?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Назначаю встречу с Мариной и прошу описать каждую сущность: что она хранит, как связана с другими, может ли существовать отдельно.",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "did_elicitation"
+          ],
+          "feedback": "Верно. Вопрос «может ли существовать отдельно» — ключевой для определения типа связи: composition (не может) vs aggregation (может). Без этого вы будете угадывать тип отношений.",
+          "timeline_event": "Провели интервью с product owner по структуре сущностей",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c2",
+          "text": "Сущности понятны из описания — сразу строю диаграмму: классы Order, Product, Cart со связями.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5,
+            "requirement_quality": -1
+          },
+          "sets_flags": [
+            "skipped_elicitation"
+          ],
+          "feedback": "Марина упомянула скидки и адрес доставки — это отдельные классы или атрибуты? Без уточнения вы будете угадывать. Скидка может быть атрибутом товара, отдельным классом Discount с правилами, или связью «промокод → заказ». Это принципиально разные решения.",
+          "timeline_event": "Построили диаграмму без уточнения — скидки и адрес доставки смоделированы произвольно",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c3",
+          "text": "Прошу разработчиков прислать текущую схему БД — по ней восстановлю Class Diagram.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5,
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [
+            "did_elicitation"
+          ],
+          "feedback": "Схема БД отражает физическую реализацию, а не бизнес-модель. Class Diagram — концептуальный уровень. БД может содержать технические таблицы (pivot, log, cache), которые не являются бизнес-классами. Идти от реализации к модели — обратный порядок.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2",
+      "node_type": "multi_select",
+      "stage": "Интервью: уточнение сущностей",
+      "context": "Марина на встрече рассказывает:\n\n«Корзина — это временная сущность, она принадлежит пользователю. Когда пользователь оформляет заказ — корзина превращается в заказ и очищается. Адрес доставки пользователь может сохранить несколько штук и выбрать при оформлении. Скидка — это промокод, он может применяться к заказу, не к отдельному товару».\n\nКакие уточняющие вопросы задаёте?",
+      "context_artifact": null,
+      "requires_flags": [
+        "did_elicitation"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "«Если заказ удалить — адреса доставки пользователя тоже удаляются?»",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1
+          },
+          "sets_flags": [
+            "asked_lifecycle"
+          ],
+          "feedback": "Отличный вопрос для определения типа связи. Если адреса удаляются вместе с заказом — это composition. Если живут независимо — aggregation. Марина сказала, что пользователь «сохраняет» адреса — значит они живут вне заказа, это aggregation.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "«Один промокод можно применить к нескольким заказам или только к одному?»",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [
+            "asked_discount_multiplicity"
+          ],
+          "feedback": "Важный вопрос для кратности. Если один промокод — один заказ: связь 1:1. Если один промокод — много заказов: 1:*. Это меняет и модель данных, и бизнес-логику валидации.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "«Товар в корзине и товар в заказе — это один и тот же класс Product или разные?»",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "asked_product_snapshot"
+          ],
+          "feedback": "Критичный вопрос. Если цена товара изменится — она должна измениться в старых заказах? Обычно нет: заказ хранит «снимок» цены на момент покупки. Это означает отдельный класс OrderItem или атрибут price в связи.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c4",
+          "text": "«Какого цвета кнопка «Применить промокод» в интерфейсе?»",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "UI-детали не влияют на Class Diagram. Диаграмма описывает структуру данных и поведение классов, а не визуальное оформление. Этот вопрос к дизайнеру.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_partial",
+      "node_type": "single_choice",
+      "stage": "Определение классов",
+      "context": "Вы строите диаграмму без интервью. У вас три класса: Order, Product, Cart.\n\nМарина присылает уточнение: «Кстати, в заказе нужно хранить цену товара на момент покупки — она может измениться потом».\n\nКак отражаете это в диаграмме?",
+      "context_artifact": null,
+      "requires_flags": [
+        "skipped_elicitation"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2p_c1",
+          "text": "Добавляю класс OrderItem с атрибутами quantity и priceAtPurchase — он связывает Order и Product",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. OrderItem — промежуточный класс (ассоциативный класс), который хранит данные конкретной позиции в заказе: количество и цену на момент покупки. Это стандартный паттерн для связи многие-ко-многим с атрибутами.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2p_c2",
+          "text": "Добавляю атрибут priceAtPurchase прямо в класс Product",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [
+            "price_in_product"
+          ],
+          "feedback": "Ошибка. priceAtPurchase — это данные конкретной транзакции, а не свойство товара как такового. Товар имеет одну текущую цену. Если добавить priceAtPurchase в Product — непонятно, цена какого заказа там хранится.",
+          "timeline_event": "Поместили цену покупки в класс Product — разработчики не поняли, как хранить историю цен",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "single_choice",
+      "stage": "Кратность связей",
+      "context": "Марина подтверждает: один заказ содержит один или несколько товаров (позиций). Один товар может входить в разные заказы.\n\nКакую кратность ставите на связи Order → OrderItem → Product?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "Order 1 — * OrderItem, OrderItem * — 1 Product (один заказ — много позиций, каждая позиция — один товар)",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5
+          },
+          "sets_flags": [
+            "correct_multiplicity"
+          ],
+          "feedback": "Верно. Order содержит одну или более позиций (1..*), каждая позиция OrderItem ссылается ровно на один Product (1). Это стандартная модель позиций заказа с промежуточным классом.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "Order 1 — 1 Product (один заказ — один товар)",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [
+            "wrong_multiplicity"
+          ],
+          "feedback": "Ошибка кратности. Марина явно сказала «один или несколько товаров». Кратность 1:1 означает, что в заказе только один товар — это противоречит требованию и сломает корзину.",
+          "timeline_event": "Указали кратность 1:1 — разработчики реализовали заказ только с одним товаром",
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "Order 0..* — 0..* Product (заказ может быть пустым, товар может не быть ни в каком заказе)",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "wrong_multiplicity"
+          ],
+          "feedback": "0..* означает «ноль или больше» — то есть заказ может не содержать ни одного товара. Пустой заказ бессмысленен. Правильно: 1..* (один или более). Нижняя граница кратности важна так же, как верхняя.",
+          "timeline_event": "Указали 0..* — разработчики допустили создание пустых заказов без товаров",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "Тип связи: Cart и User",
+      "context": "Марина подтверждает: корзина принадлежит пользователю. Если пользователь удаляется из системы — его корзина тоже удаляется автоматически. Корзина не существует без пользователя.\n\nКакой тип связи между User и Cart?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "Composition (ромб закрашенный со стороны User) — корзина не существует без пользователя и удаляется вместе с ним",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Composition — «часть-целое» с жёстким жизненным циклом: часть (Cart) не существует без целого (User) и уничтожается вместе с ним. Закрашенный ромб со стороны «целого» — стандартная нотация UML.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "Aggregation (ромб незакрашенный) — корзина связана с пользователем, но может существовать отдельно",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [
+            "wrong_relation_type"
+          ],
+          "feedback": "Aggregation предполагает, что «часть» (Cart) может существовать независимо от «целого» (User). Но Марина сказала обратное: корзина удаляется вместе с пользователем. Это composition, а не aggregation.",
+          "timeline_event": "Указали aggregation вместо composition — разработчики не реализовали каскадное удаление корзины",
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c3",
+          "text": "Association (простая стрелка) — они просто связаны",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "wrong_relation_type"
+          ],
+          "feedback": "Простая ассоциация не передаёт информацию о жизненном цикле. Разработчик видит связь, но не знает: нужно ли удалять корзину при удалении пользователя? Выбирайте наиболее точный тип связи, который передаёт бизнес-смысл.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "single_choice",
+      "stage": "Ревью диаграммы",
+      "context": "Коллега прислал черновик Class Diagram на ревью. Найдите главную проблему.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "classDiagram\n    class User {\n        +id: int\n        +email: string\n        +name: string\n        +placeOrder()\n    }\n    class Cart {\n        +id: int\n        +createdAt: date\n        +addItem()\n        +removeItem()\n        +clear()\n    }\n    class Order {\n        +id: int\n        +status: string\n        +createdAt: date\n        +totalAmount: float\n        +confirm()\n        +cancel()\n    }\n    class OrderItem {\n        +quantity: int\n        +priceAtPurchase: float\n    }\n    class Product {\n        +id: int\n        +name: string\n        +price: float\n        +stock: int\n    }\n    class Address {\n        +street: string\n        +city: string\n        +zipCode: string\n    }\n\n    User *-- Cart : владеет\n    User --> Order : оформляет\n    Order *-- OrderItem : содержит\n    OrderItem --> Product : ссылается\n    Order --> Address : доставка\n    User --> Address : сохранённые адреса"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "Order *-- OrderItem — это composition, но OrderItem должна существовать только внутри Order. Проблема не в этом. Главное: Address связан с Order стрелкой «-->`», но адреса принадлежат User и живут независимо от заказа — нужна aggregation со стороны User",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "found_address_relation"
+          ],
+          "feedback": "Верно. Марина сказала: пользователь сохраняет несколько адресов и выбирает при оформлении. Адрес живёт независимо от заказа — он принадлежит User через aggregation (незакрашенный ромб). Связь Order → Address должна быть ассоциацией «использует», а не ownership.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c2",
+          "text": "У класса Product отсутствует атрибут category — товары должны быть по категориям",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Возможно, категории нужны — но это не обсуждалось с Мариной. Добавлять атрибуты без подтверждения стейкхолдера значит вносить непроверенные требования. Главная структурная проблема диаграммы — в другом.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s5_c3",
+          "text": "Диаграмма верна — все классы и связи на месте",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [
+            "approved_wrong_diagram"
+          ],
+          "feedback": "Тип связи между User/Order и Address некорректен. Aggregation и composition передают разную семантику жизненного цикла — разработчик реализует каскадное удаление или его отсутствие, опираясь именно на этот выбор.",
+          "timeline_event": "Согласовали диаграмму с неверным типом связи для Address — каскадное удаление реализовано неправильно",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_6",
+      "node_type": "ordering",
+      "stage": "Атрибуты класса Order",
+      "context": "Расставьте атрибуты и методы класса Order по правильным секциям и приоритету. Что должно быть в классе Order в первую очередь?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "id: int — уникальный идентификатор заказа",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Идентификатор — первый и обязательный атрибут любой сущности. В Class Diagram id обычно указывается первым в секции атрибутов.",
+          "timeline_event": null,
+          "correct_rank": 1
+        },
+        {
+          "id": "s6_c2",
+          "text": "status: OrderStatus — статус заказа (enum: NEW, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Статус — ключевой бизнес-атрибут заказа. Важно: тип должен быть enum (OrderStatus), а не string — это предотвращает произвольные значения и явно документирует допустимые состояния.",
+          "timeline_event": null,
+          "correct_rank": 2
+        },
+        {
+          "id": "s6_c3",
+          "text": "totalAmount: float — итоговая сумма заказа",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Важный атрибут данных — итоговая сумма фиксируется в момент оформления. Если цены изменятся, сумма заказа должна остаться неизменной. Поэтому это отдельный атрибут, а не вычисляется каждый раз из OrderItem.",
+          "timeline_event": null,
+          "correct_rank": 3
+        },
+        {
+          "id": "s6_c4",
+          "text": "confirm(): void — метод подтверждения заказа",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Методы указываются после атрибутов в Class Diagram. confirm() — бизнес-операция, меняющая статус. В диаграмме методы документируют поведение класса, что помогает разработчикам понять ответственность объекта.",
+          "timeline_event": null,
+          "correct_rank": 4
+        }
+      ]
+    },
+    {
+      "node_id": "step_7",
+      "node_type": "single_choice",
+      "stage": "Атрибут vs Класс",
+      "context": "Марина добавляет: «Промокод — это строка, которую пользователь вводит при оформлении. У каждого промокода есть код, процент скидки и дата истечения. Один промокод можно использовать много раз разными пользователями».\n\nКак моделируете промокод?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s7_c1",
+          "text": "Отдельный класс Discount с атрибутами code, discountPercent, expiresAt. Связь с Order: Order --> Discount (0..1) — заказ может иметь или не иметь промокод",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Промокод — полноценная сущность с собственными атрибутами, жизненным циклом и бизнес-правилами (валидация, истечение). Атрибут discountCode: string в классе Order потерял бы эту информацию. Кратность 0..1: заказ может быть без промокода.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c2",
+          "text": "Атрибут discountCode: string прямо в классе Order",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [
+            "discount_as_attribute"
+          ],
+          "feedback": "Строка не хранит процент скидки и дату истечения. Если завтра добавится логика валидации промокода или история использования — придётся рефакторить всю модель. У промокода достаточно атрибутов и поведения, чтобы быть классом.",
+          "timeline_event": "Смоделировали промокод как строку — разработчикам пришлось рефакторить модель при добавлении валидации",
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c3",
+          "text": "Наследование: класс DiscountedOrder extends Order — заказ со скидкой как отдельный тип",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [],
+          "feedback": "Наследование для этого случая избыточно и неверно. Скидка — не тип заказа, а дополнительный атрибут/связь. Наследование «is-a»: DiscountedOrder «является» Order — нет, это тот же заказ, просто с промокодом.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8",
+      "node_type": "single_choice",
+      "stage": "Scope Creep",
+      "context": "Марина смотрит на готовую диаграмму и говорит:\n\n«Отлично! Кстати, мы планируем добавить отзывы на товары. Там будет класс Review с рейтингом, текстом и датой. Связан с Product и User. Можешь добавить прямо сейчас — это же просто ещё один класс?»\n\nКак отвечаете?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s8_c1",
+          "text": "«Марина, Review — отдельная функциональность с собственными бизнес-правилами: можно ли оставить отзыв без покупки, модерация, лайки. Давай зафиксирую как отдельную задачу и сделаем после финализации текущей диаграммы».",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "scope_protected"
+          ],
+          "feedback": "Верно. «Просто ещё один класс» звучит просто, но за Review скрываются бизнес-правила: кто может оставить отзыв, нужна ли верификация покупки, есть ли модерация. Без уточнения это непроверенная модель.",
+          "timeline_event": "Запрос на модуль отзывов зафиксирован как отдельная задача",
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c2",
+          "text": "Добавляю класс Review с атрибутами rating, text, createdAt и связями с Product и User.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1.5,
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [
+            "scope_creep_accepted"
+          ],
+          "feedback": "Вы добавили класс без выяснения бизнес-правил. Можно ли оставить отзыв без покупки? Один отзыв на товар или несколько? Нужна ли модерация? Без ответов на эти вопросы модель Review будет неполной и, скорее всего, неверной.",
+          "timeline_event": "Добавили класс Review без интервью — модель не учитывает верификацию покупки и модерацию",
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c3",
+          "text": "Добавляю атрибут averageRating: float в класс Product — этого достаточно для отображения рейтинга.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -0.5,
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Вы самостоятельно переосмыслили запрос Марины. Она просила класс Review, а вы добавили атрибут в Product — это другое решение с потерей данных. Подменять требование без согласования нельзя.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_9_consequence",
+      "node_type": "single_choice",
+      "stage": "Последствия: спустя три дня",
+      "context": "Разработчик Кирилл пишет:\n\n«Я реализовал модель заказа по диаграмме. У меня Order связан с Product напрямую как 1:1 — один заказ, один товар. Сейчас тестировщик пытается добавить в заказ три позиции и получает ошибку. Как это должно работать?»\n\nКак реагируете?",
+      "context_artifact": null,
+      "requires_flags": [
+        "wrong_multiplicity"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s9_c1",
+          "text": "«Кирилл, ошибка в диаграмме на моей стороне — кратность указана неверно. Должно быть Order 1 — 1..* OrderItem, OrderItem * — 1 Product. Исправляю диаграмму прямо сейчас и пришлю обновлённую версию».",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Правильная реакция: признать ошибку, дать точное исправление с конкретными значениями кратности, обновить артефакт. Чёткость ответа помогает разработчику немедленно исправить реализацию.",
+          "timeline_event": "Исправили кратность после обнаружения ошибки в реализации — потеря трёх дней разработки",
+          "correct_rank": null
+        },
+        {
+          "id": "s9_c2",
+          "text": "«Кирилл, ты мог сам догадаться — корзина же поддерживает несколько товаров».",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1.5
+          },
+          "sets_flags": [],
+          "feedback": "Разработчик реализовывал по диаграмме — своему официальному источнику истины. Если диаграмма неверна, это проблема документации, а не интуиции разработчика. Перекладывать ответственность недопустимо.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_9_good",
+      "node_type": "multi_select",
+      "stage": "Финализация",
+      "context": "Диаграмма прошла ревью без замечаний. Что проверяете перед передачей команде?",
+      "context_artifact": {
+        "type": "table",
+        "data": {
+          "headers": [
+            "Проверка",
+            "Статус"
+          ],
+          "rows": [
+            [
+              "Все классы имеют идентификатор",
+              "✓"
+            ],
+            [
+              "Типы атрибутов указаны (int, string, float, enum)",
+              "✓"
+            ],
+            [
+              "Кратность указана на всех связях",
+              "???"
+            ],
+            [
+              "Тип каждой связи обоснован (composition vs aggregation)",
+              "???"
+            ],
+            [
+              "Нет атрибутов, которые должны быть классами",
+              "✓"
+            ],
+            [
+              "Методы отражают реальное поведение, согласованное со стейкхолдером",
+              "???"
+            ]
+          ]
+        }
+      },
+      "requires_flags": [],
+      "excludes": [
+        "wrong_multiplicity"
+      ],
+      "choices": [
+        {
+          "id": "s9g_c1",
+          "text": "Проверить кратность на всех связях — особенно нижнюю границу (0 vs 1)",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Критично. Нижняя граница кратности определяет обязательность: 0..* (необязательно) vs 1..* (обязательно). Ошибка здесь напрямую влияет на валидацию данных в коде.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s9g_c2",
+          "text": "Убедиться, что для каждой composition/aggregation есть обоснование от стейкхолдера",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 1
+          },
+          "sets_flags": [],
+          "feedback": "Тип связи — не техническое решение, а бизнес-факт: «удаляется ли часть вместе с целым?». Если нет подтверждения от стейкхолдера — это предположение, которое может оказаться неверным.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s9g_c3",
+          "text": "Согласовать методы классов с командой — они должны отражать реальные операции, а не технические детали",
+          "correct": true,
+          "skill_effects": {
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Методы в Class Diagram — это контракт поведения. confirm(), cancel(), addItem() должны быть согласованы: кто их вызывает, при каких условиях, что возвращают. Иначе разработчик реализует их произвольно.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s9g_c4",
+          "text": "Убедиться, что диаграмма красиво выровнена и классы расположены симметрично",
+          "correct": false,
+          "skill_effects": {
+            "requirement_quality": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Визуальное выравнивание — не критерий качества перед передачей. Диаграмма должна быть читаемой, но идеальная симметрия не влияет на корректность модели. Проверяйте содержание, а не эстетику.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    }
+  ]
+}

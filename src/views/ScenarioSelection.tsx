@@ -10,6 +10,14 @@ interface ScenarioMeta {
   skills_tracked: string[];
 }
 
+interface ScenarioCompletion {
+  scenario_id: string;
+  best_percentage: number;
+  best_grade: string;
+  attempts: number;
+  last_completed: string;
+}
+
 const getLevelColorClasses = (level: string) => {
   const l = level.toLowerCase();
   if (l.includes('junior')) return 'bg-blue-100 text-blue-800';
@@ -21,6 +29,7 @@ const getLevelColorClasses = (level: string) => {
 export function ScenarioSelection() {
   const navigate = useNavigate();
   const [scenarios, setScenarios] = useState<ScenarioMeta[]>([]);
+  const [completions, setCompletions] = useState<Record<string, ScenarioCompletion>>({});
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<ScenarioMeta | null>(null);
 
@@ -28,6 +37,11 @@ export function ScenarioSelection() {
     try {
       const list = await invoke<ScenarioMeta[]>('list_scenarios');
       setScenarios(list);
+      
+      const compData = await invoke<ScenarioCompletion[]>('get_completions');
+      const compMap: Record<string, ScenarioCompletion> = {};
+      compData.forEach(c => { compMap[c.scenario_id] = c; });
+      setCompletions(compMap);
     } catch (e) {
       console.error(e);
     } finally {
@@ -71,7 +85,23 @@ export function ScenarioSelection() {
           {scenarios.map(s => (
             <div key={s.scenario_id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer flex flex-col" onClick={() => navigate(`/play/${s.scenario_id}`)}>
               <div className="flex justify-between items-start mb-4">
-                <h3 className="font-bold text-lg">{s.title || s.scenario_id}</h3>
+                <div>
+                  <h3 className="font-bold text-lg">{s.title || s.scenario_id}</h3>
+                  {completions[s.scenario_id] && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            completions[s.scenario_id].best_percentage >= 70 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                            {Math.round(completions[s.scenario_id].best_percentage)}% — {completions[s.scenario_id].best_grade}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                            {completions[s.scenario_id].attempts} {completions[s.scenario_id].attempts === 1 ? 'попытка' : 'попыток'}
+                        </span>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {s.level && (
                     <span className={`${getLevelColorClasses(s.level)} text-xs px-2 py-1 rounded-full font-medium uppercase`}>

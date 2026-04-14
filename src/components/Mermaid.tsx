@@ -3,6 +3,7 @@ import mermaid from 'mermaid';
 
 interface MermaidProps {
   chart: string;
+  onRender?: () => void;
 }
 
 mermaid.initialize({
@@ -11,7 +12,7 @@ mermaid.initialize({
   securityLevel: 'loose',
 });
 
-export const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
+export const Mermaid: React.FC<MermaidProps> = ({ chart, onRender }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,7 +21,8 @@ export const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
       const id = `mermaid-${Math.random().toString(36).substring(7)}`;
       mermaid.render(id, chart).then((result) => {
         if (containerRef.current) {
-            containerRef.current.innerHTML = result.svg;
+          containerRef.current.innerHTML = result.svg;
+          onRender?.();
         }
       });
     }

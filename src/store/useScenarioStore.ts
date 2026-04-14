@@ -12,6 +12,8 @@ export interface Choice {
   correct: boolean;
   feedback: string | null;
   correct_rank?: number;
+  element_selector?: string;
+  correct_category?: string;
 }
 
 export interface NodeData {

@@ -14,6 +14,7 @@ export function ScenarioWorkspace() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [orderedChoices, setOrderedChoices] = useState<Choice[]>([]);
   const [timeline, setTimeline] = useState<string[]>([]);
+  const [dragPlacements, setDragPlacements] = useState<Record<string, string>>({});
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [stepNumber, setStepNumber] = useState(1);
   const [phase, setPhase] = useState<'loading' | 'playing' | 'finished'>('loading');
@@ -21,6 +22,9 @@ export function ScenarioWorkspace() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const artifactViewerRef = useRef<HTMLDivElement>(null);
+  const selectedSvgNodeRef = useRef<HTMLElement | null>(null);
+  const draggedItemIdRef = useRef<string | null>(null);
+  const diagramClickRef = useRef<((el: Element) => void) | null>(null);
 
   useEffect(() => {
     const el = artifactViewerRef.current;
@@ -60,6 +64,7 @@ export function ScenarioWorkspace() {
     setFeedbackItems([]);
     setShowFeedback(false);
     setOrderedChoices([]);
+    setDragPlacements({});
     setTimeline([]);
     setTimelineOpen(false);
     setStepNumber(1);
@@ -79,14 +84,66 @@ export function ScenarioWorkspace() {
     return () => { cancelled = true; };
   }, [id]);
 
+  // Keep diagramClickRef current so onclick handlers attached in onRender never go stale
+  useEffect(() => {
+    if (currentNode?.node_type !== 'diagram_analysis') {
+      diagramClickRef.current = null;
+      return;
+    }
+    diagramClickRef.current = (el: Element) => {
+      if (showFeedback) return;
+      const nodeId = (el as SVGElement).id;
+      const mermaidNodeId = nodeId.replace(/^.*-flowchart-/, '').replace(/-\d+$/, '');
+      const matched = currentNode.choices.find(c => c.element_selector && mermaidNodeId === c.element_selector);
+      if (matched) {
+        setSelectedChoices([matched.id]);
+        if (selectedSvgNodeRef.current) selectedSvgNodeRef.current.style.outline = '';
+        selectedSvgNodeRef.current = el as HTMLElement;
+        (el as HTMLElement).style.outline = '3px solid #3b82f6';
+        (el as HTMLElement).style.borderRadius = '4px';
+      }
+    };
+  }, [currentNode, showFeedback]);
+
+  // Color the selected SVG node green/red when feedback is revealed
+  useEffect(() => {
+    if (!showFeedback || currentNode?.node_type !== 'diagram_analysis') return;
+    if (!selectedSvgNodeRef.current || selectedChoices.length === 0) return;
+
+    const selectedChoice = currentNode.choices.find(c => c.id === selectedChoices[0]);
+    const isCorrect = selectedChoice?.correct ?? false;
+
+    selectedSvgNodeRef.current.style.outline = `3px solid ${isCorrect ? '#22c55e' : '#ef4444'}`;
+
+    // If wrong, also highlight the correct element in green
+    if (!isCorrect) {
+      const correctChoice = currentNode.choices.find(c => c.correct);
+      if (correctChoice?.element_selector) {
+        artifactViewerRef.current?.querySelectorAll<HTMLElement>('.node').forEach(node => {
+          const nid = node.id.replace(/^.*-flowchart-/, '').replace(/-\d+$/, '');
+          if (nid === correctChoice.element_selector!) {
+            node.style.outline = '3px solid #22c55e';
+            node.style.borderRadius = '4px';
+          }
+        });
+      }
+    }
+  }, [showFeedback, currentNode, selectedChoices]);
+
   // Initialize ordering when node changes
   useEffect(() => {
+    // Clear SVG selection state from previous diagram_analysis node
+    if (selectedSvgNodeRef.current) {
+      selectedSvgNodeRef.current.style.outline = '';
+      selectedSvgNodeRef.current = null;
+    }
     setZoom(1);
     setPan({ x: 0, y: 0 });
     if (currentNode?.node_type === 'ordering' && currentNode.choices) {
       const shuffled = [...currentNode.choices].sort(() => Math.random() - 0.5);
       setOrderedChoices(shuffled);
     }
+    setDragPlacements({});
     // Auto-expand timeline when consequence node appears
     if (currentNode?.is_consequence) {
       setTimelineOpen(true);
@@ -96,6 +153,7 @@ export function ScenarioWorkspace() {
   // Detect scenario end: only when we're playing and advanceNode returned null
   useEffect(() => {
     if (phase === 'playing' && !currentNode && !loading) {
+      invoke('save_results').catch(e => console.error('Failed to save results:', e));
       setPhase('finished');
       navigate(`/result/${id}`, { replace: true });
     }
@@ -107,6 +165,9 @@ export function ScenarioWorkspace() {
   if (!currentNode) return <div className="p-8">Загрузка сценария...</div>;
 
   const isOrdering = currentNode?.node_type === 'ordering';
+  const isDiagramAnalysis = currentNode?.node_type === 'diagram_analysis';
+  const isDragClassification = currentNode?.node_type === 'drag_classification';
+  const isArtifactReview = currentNode?.node_type === 'artifact_review';
 
   const handleChoiceToggle = (choiceId: string) => {
     if (showFeedback) return;
@@ -136,8 +197,29 @@ export function ScenarioWorkspace() {
       setFeedbackItems([]);
       setSelectedChoices([]);
       setOrderedChoices([]);
+      setDragPlacements({});
       setStepNumber(prev => prev + 1);
       await advanceNode();
+    } else if (isDragClassification) {
+      const allChoices = currentNode?.choices || [];
+      const items = allChoices.map(c => {
+        const placedCategory = dragPlacements[c.id];
+        const isCorrect = placedCategory === c.correct_category;
+        
+        let targetCategoryName = currentNode?.context_artifact?.data.categories.find((cat: any) => cat.id === c.correct_category)?.label || c.correct_category;
+        
+        return {
+          text: c.text,
+          correct: isCorrect,
+          feedback: isCorrect ? `Верно (${targetCategoryName})` : c.feedback || `Неверно. Правильная категория: ${targetCategoryName}`
+        };
+      });
+
+      const payload = allChoices.map(c => `${c.id}:${dragPlacements[c.id] || ''}`);
+      await submitChoices(payload);
+      await refreshTimeline();
+      setFeedbackItems(items);
+      setShowFeedback(true);
     } else if (isOrdering && orderedChoices.length > 0) {
       const ids = orderedChoices.map(c => c.id);
 
@@ -205,7 +287,12 @@ export function ScenarioWorkspace() {
     }
   };
 
-  const canSubmit = showFeedback || (isOrdering && orderedChoices.length > 0) || selectedChoices.length > 0;
+  const canSubmit = showFeedback ||
+    (isOrdering && orderedChoices.length > 0) ||
+    (isDragClassification && Object.keys(dragPlacements).length === (currentNode?.choices.length || 0)) ||
+    (isDiagramAnalysis && selectedChoices.length > 0) ||
+    (isArtifactReview && selectedChoices.length > 0) ||
+    (selectedChoices.length > 0);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -243,7 +330,8 @@ export function ScenarioWorkspace() {
 
         {/* Artifact Viewer (Center) */}
         <div className="flex-1 bg-gray-50 border-r border-gray-200 shadow-inner relative flex flex-col overflow-hidden">
-          {currentNode?.context_artifact && (
+          {currentNode?.context_artifact &&
+           (currentNode.context_artifact.type === 'diagram' || currentNode.context_artifact.type === 'table') && (
             <div className="absolute top-4 right-4 z-10 flex gap-1 bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
               <button onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition-colors" title="Уменьшить">
                 <ZoomOut size={16} />
@@ -266,9 +354,10 @@ export function ScenarioWorkspace() {
 
           <div
             ref={artifactViewerRef}
-            className={`flex-1 overflow-hidden p-6 flex flex-col items-center justify-center relative ${currentNode?.context_artifact ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+            className={`flex-1 overflow-hidden p-6 flex flex-col items-center justify-center relative ${currentNode?.context_artifact?.type === 'diagram' && currentNode?.node_type !== 'diagram_analysis' ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
             onMouseDown={(e) => {
-              if (e.button !== 0 || !currentNode?.context_artifact) return; // Only left click and if artifact exists
+              if (e.button !== 0 || currentNode?.context_artifact?.type !== 'diagram') return;
+              if (currentNode?.node_type === 'diagram_analysis') return; // clicks are for node selection, not panning
               setIsDragging(true);
             }}
             onMouseMove={(e) => {
@@ -278,6 +367,17 @@ export function ScenarioWorkspace() {
             }}
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
+            onDragOver={(e) => {
+              if (currentNode?.context_artifact?.type === 'classification') {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+              }
+            }}
+            onDragEnter={(e) => {
+              if (currentNode?.context_artifact?.type === 'classification') {
+                e.preventDefault();
+              }
+            }}
           >
             {!currentNode?.context_artifact && (
               <div className="text-gray-400 text-sm flex flex-col items-center gap-2 m-auto">
@@ -286,7 +386,9 @@ export function ScenarioWorkspace() {
               </div>
             )}
 
-            {currentNode?.context_artifact && (
+            {/* Zoomable artifacts — inside transform wrapper */}
+            {currentNode?.context_artifact &&
+             (currentNode.context_artifact.type === 'diagram' || currentNode.context_artifact.type === 'table') && (
               <div
                 className="origin-center flex justify-center w-full select-none"
                 style={{
@@ -294,11 +396,25 @@ export function ScenarioWorkspace() {
                   transition: isDragging ? 'none' : 'transform 0.2s ease-in-out'
                 }}
               >
-                {currentNode?.context_artifact?.type === 'diagram' && (
-                  <Mermaid chart={currentNode.context_artifact.data as string} />
+                {currentNode.context_artifact.type === 'diagram' && (
+                  <Mermaid
+                    chart={currentNode.context_artifact.data as string}
+                    onRender={() => {
+                      if (currentNode?.node_type === 'diagram_analysis') {
+                        artifactViewerRef.current?.querySelectorAll<SVGGElement>('.node').forEach(node => {
+                          node.style.cursor = 'pointer';
+                          node.style.pointerEvents = 'all';
+                          node.onclick = (e) => {
+                            e.stopPropagation();
+                            diagramClickRef.current?.(node);
+                          };
+                        });
+                      }
+                    }}
+                  />
                 )}
 
-                {currentNode?.context_artifact?.type === 'table' && currentNode.context_artifact.data && (
+                {currentNode.context_artifact.type === 'table' && currentNode.context_artifact.data && (
                   <div className="w-full overflow-x-auto shadow-sm rounded-lg">
                     <table className="w-full text-sm border-collapse bg-white">
                       <thead>
@@ -322,17 +438,140 @@ export function ScenarioWorkspace() {
                 )}
               </div>
             )}
+
+            {currentNode?.context_artifact &&
+             (currentNode.context_artifact.type === 'classification' || currentNode.context_artifact.type === 'reviewable_table') && (
+              <div className="w-full h-full p-2 flex flex-col items-center justify-center">
+                {currentNode.context_artifact.type === 'classification' && currentNode.context_artifact.data && (
+                  <div className="w-full grid grid-cols-2 gap-4">
+                    {(currentNode.context_artifact.data.categories || []).map((cat: any) => (
+                      <div
+                        key={cat.id}
+                        className="border-2 border-dashed border-gray-300 rounded-xl p-4 bg-gray-50 min-h-[150px] flex flex-col"
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                        }}
+                        onDragEnter={(e) => {
+                          e.preventDefault();
+                          (e.currentTarget as HTMLElement).classList.add('bg-blue-50', 'border-blue-300');
+                        }}
+                        onDragLeave={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                            (e.currentTarget as HTMLElement).classList.remove('bg-blue-50', 'border-blue-300');
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          (e.currentTarget as HTMLElement).classList.remove('bg-blue-50', 'border-blue-300');
+                          const itemId = draggedItemIdRef.current;
+                          if (itemId && !showFeedback) {
+                            setDragPlacements(prev => ({ ...prev, [itemId]: cat.id }));
+                          }
+                          draggedItemIdRef.current = null;
+                        }}
+                      >
+                        <h4 className="font-bold text-gray-700 mb-3 text-center">{cat.label}</h4>
+                        <div className="flex-1 flex flex-col gap-2">
+                          {currentNode.choices.filter(c => dragPlacements[c.id] === cat.id).map(choice => (
+                            <div
+                              key={choice.id}
+                              draggable={!showFeedback}
+                              onDragStart={(e) => {
+                                if (!showFeedback) {
+                                  draggedItemIdRef.current = choice.id;
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  e.dataTransfer.setData('text', choice.id);
+                                  (e.target as HTMLElement).style.opacity = '0.5';
+                                }
+                              }}
+                              onDragEnd={(e) => {
+                                (e.target as HTMLElement).style.opacity = '1';
+                                draggedItemIdRef.current = null;
+                              }}
+                              className="bg-white border border-gray-200 shadow-sm p-2 rounded text-sm text-gray-800 text-center cursor-grab hover:bg-gray-50 active:cursor-grabbing"
+                            >
+                              {choice.text}
+                            </div>
+                          ))}
+                          {Object.values(dragPlacements).every(v => v !== cat.id) && (
+                            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm italic">
+                              Перетащите сюда...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {currentNode.context_artifact.type === 'reviewable_table' && currentNode.context_artifact.data && (
+                  <div className="w-full overflow-x-auto shadow-sm rounded-lg">
+                    <table className="w-full text-sm border-collapse bg-white">
+                      <thead>
+                        <tr>
+                          {(currentNode.context_artifact.data.headers || []).map((h: string, i: number) => (
+                            <th key={i} className="border border-gray-200 bg-gray-50 px-4 py-2 text-left font-semibold text-gray-700">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(currentNode.context_artifact.data.rows || []).map((row: any) => (
+                          <tr key={row.id} className="hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                            {(row.cells || []).map((cell: any) => {
+                              const isSelected = selectedChoices.includes(cell.id);
+
+                              let feedbackClass = '';
+                              if (showFeedback) {
+                                const isError = currentNode.choices.some(c => c.id === cell.id);
+                                if (isSelected && isError) feedbackClass = 'bg-green-100 border-green-500 ring-2 ring-green-400';
+                                else if (isSelected && !isError) feedbackClass = 'bg-red-100 border-red-500 ring-2 ring-red-400';
+                                else if (!isSelected && isError) feedbackClass = 'bg-orange-100 border-orange-400 ring-2 ring-orange-300';
+                              } else if (isSelected) {
+                                feedbackClass = 'bg-red-50 border-red-300 ring-2 ring-red-200';
+                              } else {
+                                feedbackClass = 'hover:bg-yellow-50';
+                              }
+
+                              return (
+                                <td
+                                  key={cell.id}
+                                  onClick={() => {
+                                    if (!showFeedback) handleChoiceToggle(cell.id);
+                                  }}
+                                  className={`cursor-pointer px-4 py-2 border border-gray-200 transition-colors ${feedbackClass}`}
+                                >
+                                  {cell.value}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Decision Panel */}
         <div className="w-1/3 bg-white p-6 overflow-y-auto flex flex-col">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-            {isOrdering ? 'Расположите в правильном порядке' : 'Решение'}
+            {isOrdering ? 'Расположите в правильном порядке' : 
+             isDragClassification ? 'Перетащите элементы' :
+             isDiagramAnalysis ? 'Анализ диаграммы' :
+             isArtifactReview ? 'Поиск ошибок' :
+             'Решение'}
           </h3>
-          {!showFeedback && !isOrdering && (
+          {!showFeedback && (
             <p className="text-xs text-gray-400 mb-4">
-              {currentNode?.node_type === 'single_choice' ? 'Выберите один вариант' : 'Выберите один или несколько вариантов'}
+              {isOrdering ? 'Упорядочьте элементы' :
+               isDragClassification ? 'Перетащите элементы слева в правильные категории справа' :
+               isDiagramAnalysis ? 'Кликните на проблемный элемент на диаграмме' :
+               isArtifactReview ? 'Найдите ошибки в артефакте (выделите ячейки) и нажмите подтвердить' :
+               currentNode?.node_type === 'single_choice' ? 'Выберите один вариант' : 'Выберите один или несколько вариантов'}
             </p>
           )}
           {(showFeedback || isOrdering) && <div className="mb-3" />}
@@ -392,6 +631,75 @@ export function ScenarioWorkspace() {
                   <span className="text-sm text-gray-800">{choice.text}</span>
                 </div>
               ))}
+            </div>
+          ) : isDragClassification && !showFeedback ? (
+            /* Drag Classification UI */
+            <div 
+              className="space-y-2 flex-1 pb-4"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+              }}
+              onDragEnter={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const itemId = draggedItemIdRef.current;
+                if (itemId && !showFeedback) {
+                  setDragPlacements(prev => {
+                    const next = { ...prev };
+                    delete next[itemId];
+                    return next;
+                  });
+                }
+                draggedItemIdRef.current = null;
+              }}
+            >
+              <p className="text-xs text-gray-400 italic mb-2 text-center">Нераспределенные элементы:</p>
+              {currentNode?.choices.filter(c => !dragPlacements[c.id]).map(choice => (
+                <div 
+                  key={choice.id} 
+                  draggable={true}
+                  onDragStart={(e) => {
+                    if (!showFeedback) {
+                      draggedItemIdRef.current = choice.id;
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text', choice.id);
+                      (e.target as HTMLElement).style.opacity = '0.5';
+                    }
+                  }}
+                  onDragEnd={(e) => {
+                    (e.target as HTMLElement).style.opacity = '1';
+                    draggedItemIdRef.current = null;
+                  }}
+                  className="p-3 border border-gray-200 rounded-lg cursor-grab hover:bg-gray-50 transition-colors shadow-sm bg-white active:cursor-grabbing"
+                >
+                  <p className="text-sm font-medium text-gray-800">{choice.text}</p>
+                </div>
+              ))}
+              {currentNode?.choices.filter(c => !dragPlacements[c.id]).length === 0 && (
+                <div className="text-center p-4 text-green-600 font-medium bg-green-50 rounded-lg border border-green-200">
+                  Все элементы распределены!
+                </div>
+              )}
+            </div>
+          ) : isDiagramAnalysis && !showFeedback ? (
+            <div className="flex-1 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50 text-center">
+              {selectedChoices.length > 0 ? (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Выбран элемент:</p>
+                  <p className="text-sm font-medium text-blue-700">
+                    {currentNode.choices.find(c => c.id === selectedChoices[0])?.text}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">Кликните другой элемент, чтобы изменить</p>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm">Кликните на проблемный элемент диаграммы.</p>
+              )}
+            </div>
+          ) : isArtifactReview && !showFeedback ? (
+            <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50 text-gray-500 text-center">
+              <p className="mb-2">Выберите ошибочные ячейки в артефакте.</p>
+              <p className="text-sm">Выбрано: <strong>{selectedChoices.length}</strong></p>
             </div>
           ) : (
             /* Single/Multi choice UI */

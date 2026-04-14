@@ -1,0 +1,559 @@
+{
+  "scenario_id": "jr-sequence-payment",
+  "title": "Оплата картой: требования → Sequence Diagram",
+  "level": "junior",
+  "pack": "core",
+  "description": "Менеджер продукта описывает процесс оплаты на сайте. Ваша задача — правильно зафиксировать взаимодействие систем в Sequence Diagram и не пропустить пути ошибок.",
+  "skills_tracked": [
+    "stakeholder_communication",
+    "scope_control",
+    "requirement_quality",
+    "diagram_accuracy",
+    "nfr_awareness"
+  ],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "single_choice",
+      "stage": "Входящая заявка",
+      "context": "Менеджер продукта Сергей пишет в Slack:\n\n«Нам нужна диаграмма для процесса оплаты — разработчики спорят, кто кому что отправляет. Сделаешь Sequence Diagram? Там: пользователь, наш сайт, платёжный шлюз PayFlow и наша БД».\n\nС чего начинаете?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s1_c1",
+          "text": "Прошу Сергея описать процесс шаг за шагом: что пользователь делает, что система отвечает, что происходит если оплата отклонена.",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "did_elicitation"
+          ],
+          "feedback": "Верно. Sequence Diagram отражает конкретный сценарий взаимодействия. Без понимания шагов, участников и альтернативных путей (отклонение, таймаут) диаграмма будет неполной.",
+          "timeline_event": "Провели интервью с менеджером продукта по процессу оплаты",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c2",
+          "text": "Участники уже названы — сразу строю диаграмму по стандартному flow оплаты.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5,
+            "requirement_quality": -1
+          },
+          "sets_flags": [
+            "skipped_elicitation"
+          ],
+          "feedback": "Список участников — это не сценарий. У каждой компании своя логика: когда сохраняется заказ, синхронная или асинхронная нотификация, что происходит при таймауте PayFlow. Без уточнения вы рисуете «типовой» flow, который может не совпасть с реальным.",
+          "timeline_event": "Построили диаграмму без уточнения деталей процесса",
+          "correct_rank": null
+        },
+        {
+          "id": "s1_c3",
+          "text": "Прошу Сергея собрать всех разработчиков на трёхчасовой воркшоп по процессу оплаты.",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5,
+            "scope_control": -0.5
+          },
+          "sets_flags": [
+            "did_elicitation"
+          ],
+          "feedback": "Трёхчасовой воркшоп — избыточно для одной Sequence Diagram junior-уровня. Достаточно 30-минутного интервью с Сергеем и при необходимости уточнений у разработчиков. Планируйте усилия соразмерно задаче.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2",
+      "node_type": "multi_select",
+      "stage": "Интервью с менеджером",
+      "context": "Сергей рассказывает:\n\n«Пользователь вводит данные карты и нажимает «Оплатить». Мы отправляем запрос в PayFlow. Если всё ок — показываем страницу успеха. PayFlow отвечает нам, мы сохраняем в БД».\n\nКакие вопросы вы задаёте?",
+      "context_artifact": null,
+      "requires_flags": [
+        "did_elicitation"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2_c1",
+          "text": "«Что происходит, если PayFlow отклонил платёж или вернул ошибку?»",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "asked_error_path"
+          ],
+          "feedback": "Ключевой вопрос. В Sequence Diagram error path оформляется через фрагмент alt или opt. Без него диаграмма показывает только happy path — что недопустимо для платёжного сценария.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c2",
+          "text": "«Мы сохраняем заказ в БД до или после ответа от PayFlow?»",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "asked_db_timing"
+          ],
+          "feedback": "Критично для правильного порядка сообщений в диаграмме. Если сохраняем до ответа — заказ может остаться в статусе «ожидает» при отказе PayFlow. Это определяет, нужен ли rollback.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c3",
+          "text": "«Есть ли таймаут на ответ PayFlow? Что делаем, если шлюз не отвечает 30 секунд?»",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1
+          },
+          "sets_flags": [
+            "asked_timeout"
+          ],
+          "feedback": "Отличный NFR-вопрос. Таймаут — это отдельный сценарий, который моделируется через фрагмент opt или loop в Sequence Diagram. Без него система зависнет при недоступности шлюза.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2_c4",
+          "text": "«Какой шрифт использует страница успеха?»",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "UI-детали не влияют на Sequence Diagram. Диаграмма описывает взаимодействие систем, а не визуальное оформление. Этот вопрос уводит интервью в сторону дизайна.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_2_partial",
+      "node_type": "single_choice",
+      "stage": "Определение участников",
+      "context": "Вы строите диаграмму по информации из Slack. Сергей назвал четырёх участников: пользователь, сайт, PayFlow, БД.\n\nКого ещё стоит добавить, исходя из типичного платёжного flow?",
+      "context_artifact": null,
+      "requires_flags": [
+        "skipped_elicitation"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s2p_c1",
+          "text": "Браузер пользователя как отдельный participant — он отправляет HTTP-запрос, а не сам пользователь",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1
+          },
+          "sets_flags": [],
+          "feedback": "Верно. В Sequence Diagram для веб-систем различают «Пользователь» (actor) и «Браузер» (system). Это важно, когда часть логики выполняется на клиенте (валидация карты, 3DS редирект). Без этого разграничения диаграмма смешивает уровни.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s2p_c2",
+          "text": "Никого — четырёх участников достаточно",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [
+            "missed_browser_actor"
+          ],
+          "feedback": "Зависит от детализации. Для базовой диаграммы четыре участника могут быть достаточны, но если сайт выполняет редирект на 3DS-страницу банка — браузер становится самостоятельным участником. Стоило уточнить у Сергея.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_3",
+      "node_type": "single_choice",
+      "stage": "Тип стрелок",
+      "context": "Вы начинаете рисовать диаграмму. Сергей сказал: «PayFlow принимает запрос и сразу возвращает результат — синхронно».\n\nКакой тип стрелки используете для запроса от сайта к PayFlow и для ответа обратно?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s3_c1",
+          "text": "Запрос: сплошная стрелка (→). Ответ: пунктирная стрелка (-->) ",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5
+          },
+          "sets_flags": [],
+          "feedback": "Верно. В UML Sequence Diagram: сплошная стрелка (—>) — синхронный вызов или отправка сообщения; пунктирная стрелка (-->) — возвращаемое значение или ответ. Это базовое правило нотации.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c2",
+          "text": "Запрос и ответ: обе сплошные стрелки — это же один синхронный вызов",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [
+            "wrong_arrow_type"
+          ],
+          "feedback": "Ошибка нотации. Ответное сообщение (return) всегда рисуется пунктирной стрелкой в UML. Две сплошные стрелки создают впечатление двух независимых вызовов, а не запроса и ответа.",
+          "timeline_event": "Использованы неверные типы стрелок — диаграмма неоднозначно читается командой",
+          "correct_rank": null
+        },
+        {
+          "id": "s3_c3",
+          "text": "Запрос: пунктирная стрелка (асинхронно). Ответ: отдельное событие позже",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [
+            "modeled_as_async"
+          ],
+          "feedback": "Сергей явно сказал «синхронно» — PayFlow возвращает результат сразу. Асинхронная модель (запрос без ожидания ответа) — это другой паттерн, применяемый например с очередями сообщений. Здесь он неверен.",
+          "timeline_event": "Смоделировали синхронный вызов как асинхронный — разработчики реализуют polling вместо ожидания ответа",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_4",
+      "node_type": "single_choice",
+      "stage": "Ревью диаграммы",
+      "context": "Коллега прислал черновик диаграммы на ревью. Найдите проблему.",
+      "context_artifact": {
+        "type": "diagram",
+        "data": "sequenceDiagram\n    actor U as Пользователь\n    participant S as Сайт\n    participant P as PayFlow\n    participant D as БД\n\n    U->>S: Нажать «Оплатить» (данные карты)\n    S->>P: POST /charge (сумма, токен карты)\n    P-->>S: 200 OK (payment_id, status=success)\n    S->>D: INSERT order (status=paid)\n    D-->>S: OK\n    S-->>U: Страница успеха"
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s4_c1",
+          "text": "Отсутствует alt-фрагмент для ошибки PayFlow — нет пути, если оплата отклонена или шлюз недоступен",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5,
+            "requirement_quality": 0.5
+          },
+          "sets_flags": [
+            "found_missing_alt"
+          ],
+          "feedback": "Верно. Sequence Diagram для платёжного сценария без фрагмента alt — неполная. Alt показывает: «если PayFlow вернул ошибку — делаем X, иначе — делаем Y». Без этого диаграмма описывает только happy path и вводит разработчиков в заблуждение.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c2",
+          "text": "Participant «БД» не должен быть в диаграмме — это внутренняя деталь реализации сайта",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Спорно, но не является ошибкой при данном уровне детализации. Если важно показать, когда именно сохраняется заказ — БД как participant оправдана. Критическая проблема диаграммы в другом: отсутствует обработка ошибки.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s4_c3",
+          "text": "Диаграмма верна — happy path отражён корректно",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1.5
+          },
+          "sets_flags": [
+            "approved_incomplete_diagram"
+          ],
+          "feedback": "Happy path есть, но диаграмма не полная. Для платёжного сценария error path — это не опция, это обязательная часть. Пропустить отклонение карты в документации значит передать разработчикам неполные требования.",
+          "timeline_event": "Согласовали неполную диаграмму без error path — разработчики не реализовали обработку ошибок PayFlow",
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_5",
+      "node_type": "ordering",
+      "stage": "Порядок сообщений",
+      "context": "Расставьте сообщения в правильном порядке для happy path платёжного сценария.",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s5_c1",
+          "text": "Пользователь → Сайт: отправка формы с данными карты",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Первое сообщение — действие пользователя, запускающее процесс. В Sequence Diagram actor всегда инициирует поток.",
+          "timeline_event": null,
+          "correct_rank": 1
+        },
+        {
+          "id": "s5_c2",
+          "text": "Сайт → PayFlow: запрос на списание (сумма, токен карты)",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Сайт получает данные карты и инициирует запрос к платёжному шлюзу. До сохранения в БД — нужно получить подтверждение от PayFlow, иначе рискуем сохранить неоплаченный заказ как оплаченный.",
+          "timeline_event": null,
+          "correct_rank": 2
+        },
+        {
+          "id": "s5_c3",
+          "text": "PayFlow → Сайт: ответ (статус оплаты, payment_id)",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Синхронный ответ от PayFlow приходит до того, как сайт предпринимает какие-либо действия. Именно этот ответ определяет, что делать дальше: сохранять заказ или показывать ошибку.",
+          "timeline_event": null,
+          "correct_rank": 3
+        },
+        {
+          "id": "s5_c4",
+          "text": "Сайт → БД: сохранение заказа со статусом «оплачен»",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Заказ сохраняется только после успешного ответа от PayFlow. Если сохранить раньше — при ошибке шлюза в БД останется «зависший» заказ без реального платежа.",
+          "timeline_event": null,
+          "correct_rank": 4
+        },
+        {
+          "id": "s5_c5",
+          "text": "Сайт → Пользователь: страница подтверждения оплаты",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Финальный шаг — показать пользователю результат только после того, как все внутренние операции завершены. Показывать страницу успеха до сохранения в БД — ошибка, которая приводит к рассинхрону.",
+          "timeline_event": null,
+          "correct_rank": 5
+        }
+      ]
+    },
+    {
+      "node_id": "step_6",
+      "node_type": "single_choice",
+      "stage": "Alt-фрагмент",
+      "context": "Вы добавляете обработку ошибки PayFlow. Нужно выбрать правильный комбинированный фрагмент UML для модели «если оплата успешна — X, иначе — Y».",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s6_c1",
+          "text": "alt — показывает альтернативные ветки выполнения (if/else), разделённые пунктирной линией",
+          "correct": true,
+          "skill_effects": {
+            "diagram_accuracy": 1.5
+          },
+          "sets_flags": [
+            "used_alt_fragment"
+          ],
+          "feedback": "Верно. Фрагмент alt — это UML-эквивалент if/else. Верхняя секция: условие [success], нижняя: [failure]. Каждая секция содержит свою последовательность сообщений. Это стандартный способ показать ветвление в Sequence Diagram.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c2",
+          "text": "opt — показывает необязательный блок, который может выполниться или нет",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [],
+          "feedback": "opt — это «если условие истинно, выполни». Он не моделирует альтернативу: нет секции «иначе». Для сценария «успех / ошибка» нужен alt с двумя ветками, не opt.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s6_c3",
+          "text": "loop — показывает повторяющиеся вызовы до выполнения условия",
+          "correct": false,
+          "skill_effects": {
+            "diagram_accuracy": -1
+          },
+          "sets_flags": [],
+          "feedback": "loop используется для моделирования повторений (retry, polling). Для ветвления «успех/ошибка» он не подходит. Это alt.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_7",
+      "node_type": "single_choice",
+      "stage": "Scope Creep",
+      "context": "Сергей смотрит на готовую диаграмму и говорит:\n\n«Классно! Кстати, пока ты работаешь над этим — можешь добавить сюда flow аналитики? Хочу показать, как событие purchase уходит в нашу аналитику DataLake после успешной оплаты. Это же один процесс».\n\nКак отвечаете?",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s7_c1",
+          "text": "«Сергей, аналитический flow — отдельная интеграция с другим участником (DataLake) и другой целью. Давай зафиксирую это как отдельную задачу. Сейчас финализируем платёжную диаграмму».",
+          "correct": true,
+          "skill_effects": {
+            "scope_control": 1.5
+          },
+          "sets_flags": [
+            "scope_protected"
+          ],
+          "feedback": "Правильно. Одна Sequence Diagram — один сценарий. Добавление аналитического flow перегрузит диаграмму и смешает два разных контекста: платёж (синхронный, критичный) и аналитика (асинхронная, некритичная). Вы правильно зафиксировали запрос и защитили скоуп.",
+          "timeline_event": "Запрос на аналитический flow зафиксирован как отдельная задача",
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c2",
+          "text": "Добавляю DataLake как нового participant и рисую async-вызов после шага сохранения в БД.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -1.5,
+            "diagram_accuracy": -0.5
+          },
+          "sets_flags": [
+            "scope_creep_accepted"
+          ],
+          "feedback": "Диаграмма разрастается за рамки исходной задачи. Кроме того, вы добавляете async-вызов без выяснения деталей: гарантии доставки, что происходит при недоступности DataLake. Без интервью это будет неточная документация.",
+          "timeline_event": "Включили аналитический flow без интервью — диаграмма содержит непроверенные предположения",
+          "correct_rank": null
+        },
+        {
+          "id": "s7_c3",
+          "text": "Соглашаюсь, но говорю что это займёт ещё день.",
+          "correct": false,
+          "skill_effects": {
+            "scope_control": -0.5
+          },
+          "sets_flags": [
+            "scope_creep_accepted"
+          ],
+          "feedback": "Вы взяли задачу в текущую итерацию без явного решения о приоритете. Правильнее — зафиксировать как отдельный беклог-айтем и не расширять скоуп без согласования.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8_consequence",
+      "node_type": "single_choice",
+      "stage": "Последствия: три дня спустя",
+      "context": "Разработчик Артём пишет в чат:\n\n«Слушай, у нас проблема. По диаграмме я реализовал запрос к PayFlow как асинхронный — отправили и не ждём. Теперь у нас 40 заказов зависли в статусе «ожидает оплаты», потому что никто не обрабатывает ответ. Менеджеры звонят клиентам вручную».\n\nКак реагируете?",
+      "context_artifact": null,
+      "requires_flags": [
+        "modeled_as_async"
+      ],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "s8_c1",
+          "text": "«Артём, ошибка в диаграмме — я неверно указал тип вызова. PayFlow синхронный, сайт должен ждать ответа перед сохранением заказа. Исправляю диаграмму прямо сейчас, параллельно давай разберём hotfix».",
+          "correct": true,
+          "skill_effects": {
+            "stakeholder_communication": 1,
+            "diagram_accuracy": 0.5
+          },
+          "sets_flags": [],
+          "feedback": "Правильная реакция: признать ошибку, объяснить суть, предложить конкретный путь вперёд. Совмещать исправление документации с обсуждением hotfix — зрелый подход в кризисной ситуации.",
+          "timeline_event": "Исправили ошибку async/sync после инцидента с 40 зависшими заказами — потеря трёх дней и ручная работа менеджеров",
+          "correct_rank": null
+        },
+        {
+          "id": "s8_c2",
+          "text": "«Артём, это ошибка реализации — в диаграмме нет слова «асинхронный»».",
+          "correct": false,
+          "skill_effects": {
+            "stakeholder_communication": -1.5
+          },
+          "sets_flags": [],
+          "feedback": "Перекладывание ответственности в момент инцидента разрушает доверие. Диаграмма — ваш артефакт. Если тип стрелки был неоднозначен и разработчик интерпретировал его неверно — это провал документации, а не реализации.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    },
+    {
+      "node_id": "step_8_good",
+      "node_type": "multi_select",
+      "stage": "NFR и финализация",
+      "context": "Диаграмма готова и корректна. Сергей спрашивает:\n\n«Нам нужно добавить нефункциональные требования к этому flow. Что из перечисленного относится к NFR для платёжного сценария?»",
+      "context_artifact": null,
+      "requires_flags": [],
+      "excludes": [
+        "modeled_as_async"
+      ],
+      "choices": [
+        {
+          "id": "s8g_c1",
+          "text": "Таймаут запроса к PayFlow — не более 10 секунд",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Таймаут — это NFR категории надёжности. Без него сайт может ждать ответа бесконечно при недоступности PayFlow, блокируя поток пользователя.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8g_c2",
+          "text": "Данные карты не логируются в системах сайта (PCI DSS)",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Это NFR безопасности и соответствия стандарту PCI DSS. Логирование номера карты или CVV — прямое нарушение требований. Это должно быть явно зафиксировано в требованиях.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8g_c3",
+          "text": "Кнопка «Оплатить» должна быть зелёного цвета",
+          "correct": false,
+          "skill_effects": {
+            "nfr_awareness": -0.5
+          },
+          "sets_flags": [],
+          "feedback": "Это UI-требование, а не NFR. NFR описывают качественные характеристики системы: производительность, безопасность, надёжность, совместимость. Цвет кнопки — задача дизайнера, не SA.",
+          "timeline_event": null,
+          "correct_rank": null
+        },
+        {
+          "id": "s8g_c4",
+          "text": "Успешная оплата должна отображаться пользователю не более чем за 3 секунды",
+          "correct": true,
+          "skill_effects": {
+            "nfr_awareness": 1
+          },
+          "sets_flags": [],
+          "feedback": "Верно. Это NFR производительности — response time для критичного пользовательского пути. Платёжный сценарий напрямую влияет на конверсию, поэтому SLA здесь обязателен.",
+          "timeline_event": null,
+          "correct_rank": null
+        }
+      ]
+    }
+  ]
+}

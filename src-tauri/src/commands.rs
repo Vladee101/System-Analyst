@@ -3,9 +3,12 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::State;
 
+use rusqlite::Connection;
+
 pub struct AppState {
     pub session: Mutex<SessionState>,
     pub scenarios: Mutex<HashMap<String, Scenario>>,
+    pub db: Mutex<Connection>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -164,8 +167,67 @@ pub fn submit_choice(
             "{} of {} items in correct position",
             correct_count, total_items
         ))
+    } else if node.node_type == "drag_classification" {
+        let mut correct_count: u32 = 0;
+        let total_items = choice_ids.len() as u32;
+
+        for encoded in &choice_ids {
+            let parts: Vec<&str> = encoded.splitn(2, ':').collect();
+            if parts.len() != 2 { continue; }
+            let item_id = parts[0];
+            let placed_category = parts[1];
+
+            if let Some(choice) = node.choices.iter().find(|c| c.id == item_id) {
+                let expected_category = choice.correct_category.as_deref().unwrap_or("");
+                
+                if placed_category == expected_category {
+                    correct_count += 1;
+                    // Apply full skill effects
+                    for (skill, delta) in &choice.skill_effects {
+                        let current = session.skill_vector.entry(skill.clone()).or_insert(0.0);
+                        *current += delta;
+                    }
+                } else {
+                    // Apply half penalty
+                    for (skill, delta) in &choice.skill_effects {
+                        let current = session.skill_vector.entry(skill.clone()).or_insert(0.0);
+                        *current -= delta * 0.5;
+                    }
+                }
+
+                // Apply flags
+                for flag in &choice.sets_flags {
+                    if !session.flags.contains(flag) {
+                        session.flags.push(flag.clone());
+                        let step_number = session.visited.len();
+                        session.flag_origins.insert(flag.clone(), step_number);
+                    }
+                }
+                // Timeline
+                if let Some(event) = &choice.timeline_event {
+                    session.timeline.push(event.clone());
+                }
+            }
+        }
+
+        // Track max possible for drag_classification: sum of all positive skill_effects
+        let mut best_per_skill: HashMap<String, f32> = HashMap::new();
+        for choice in &node.choices {
+            for (skill, delta) in &choice.skill_effects {
+                if *delta > 0.0 {
+                    let current_best = best_per_skill.entry(skill.clone()).or_insert(0.0);
+                    *current_best += delta;
+                }
+            }
+        }
+        for (skill, max_delta) in &best_per_skill {
+            let current_max = session.max_possible_skills.entry(skill.clone()).or_insert(0.0);
+            *current_max += max_delta;
+        }
+
+        Ok(format!("{} of {} items correctly classified", correct_count, total_items))
     } else {
-        // SINGLE_CHOICE / MULTI_SELECT: existing logic
+        // SINGLE_CHOICE / MULTI_SELECT / DIAGRAM_ANALYSIS / ARTIFACT_REVIEW
         for chosen_id in &choice_ids {
             if let Some(choice) = node.choices.iter().find(|c| &c.id == chosen_id) {
                 // Apply flags
@@ -184,6 +246,13 @@ pub fn submit_choice(
                 // Timeline
                 if let Some(event) = &choice.timeline_event {
                     session.timeline.push(event.clone());
+                }
+            } else if node.node_type == "artifact_review" || node.node_type == "multi_select" {
+                // False positive: student selected an item not in choices
+                if let Some(first_skill) = node.choices.first()
+                    .and_then(|c| c.skill_effects.keys().next()) {
+                    let current = session.skill_vector.entry(first_skill.clone()).or_insert(0.0);
+                    *current -= 0.5;
                 }
             }
         }
@@ -459,4 +528,105 @@ pub fn get_results(state: State<'_, AppState>) -> Result<ScenarioResults, String
 pub fn get_timeline(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     let session = state.session.lock().unwrap();
     Ok(session.timeline.clone())
+}
+
+#[tauri::command]
+pub fn save_results(state: State<'_, AppState>) -> Result<(), String> {
+    let session = state.session.lock().unwrap();
+    let scenarios = state.scenarios.lock().unwrap();
+    let db = state.db.lock().unwrap();
+
+    let scenario_id = session.scenario_id.as_ref().ok_or("No scenario loaded")?;
+    let scenario = scenarios.get(scenario_id).ok_or("Scenario not found")?;
+
+    let mut total_earned: f32 = 0.0;
+    let mut total_max: f32 = 0.0;
+    let mut skills_vec = Vec::new();
+
+    for skill_name in &scenario.skills_tracked {
+        let earned = *session.skill_vector.get(skill_name).unwrap_or(&0.0);
+        let max_possible = *session.max_possible_skills.get(skill_name).unwrap_or(&1.0);
+        let max_possible = if max_possible <= 0.0 { 1.0 } else { max_possible };
+        let pct = (earned / max_possible * 100.0).clamp(0.0, 100.0);
+        total_earned += earned.max(0.0);
+        total_max += max_possible;
+        skills_vec.push(serde_json::json!({
+            "skill": skill_name,
+            "earned": earned,
+            "max": max_possible,
+            "pct": pct
+        }));
+    }
+
+    let overall_pct = if total_max > 0.0 {
+        (total_earned / total_max * 100.0).clamp(0.0, 100.0)
+    } else { 0.0 };
+
+    let grade = match overall_pct as u32 {
+        85..=100 => "Отлично",
+        70..=84 => "Хорошо",
+        50..=69 => "Удовлетворительно",
+        _ => "Требуется практика",
+    };
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    db.execute(
+        "INSERT INTO scenario_results (scenario_id, completed_at, overall_percentage, grade, nodes_visited, skills_json, timeline_json, flags_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        rusqlite::params![
+            scenario_id,
+            now,
+            overall_pct,
+            grade,
+            session.visited.len(),
+            serde_json::to_string(&skills_vec).unwrap(),
+            serde_json::to_string(&session.timeline).unwrap(),
+            serde_json::to_string(&session.flags).unwrap(),
+        ],
+    ).map_err(|e| format!("Failed to save results: {}", e))?;
+
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+pub struct ScenarioCompletion {
+    pub scenario_id: String,
+    pub best_percentage: f32,
+    pub best_grade: String,
+    pub attempts: u32,
+    pub last_completed: String,
+}
+
+#[tauri::command]
+pub fn get_completions(state: State<'_, AppState>) -> Result<Vec<ScenarioCompletion>, String> {
+    let db = state.db.lock().unwrap();
+
+    let mut stmt = db.prepare("
+        SELECT 
+            scenario_id,
+            MAX(overall_percentage) as best_pct,
+            COUNT(*) as attempts,
+            MAX(completed_at) as last_completed
+        FROM scenario_results
+        GROUP BY scenario_id
+    ").map_err(|e| e.to_string())?;
+
+    let completions = stmt.query_map([], |row| {
+        let best_pct: f32 = row.get(1)?;
+        let grade = match best_pct as u32 {
+            85..=100 => "Отлично",
+            70..=84 => "Хорошо",
+            50..=69 => "Удовлетворительно",
+            _ => "Требуется практика",
+        };
+        Ok(ScenarioCompletion {
+            scenario_id: row.get(0)?,
+            best_percentage: best_pct,
+            best_grade: grade.to_string(),
+            attempts: row.get(2)?,
+            last_completed: row.get(3)?,
+        })
+    }).map_err(|e| e.to_string())?;
+
+    completions.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
 }

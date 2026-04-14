@@ -41,6 +41,8 @@ pub struct Choice {
     pub feedback: Option<String>,
     pub timeline_event: Option<String>,
     pub correct_rank: Option<u32>,
+    pub element_selector: Option<String>,
+    pub correct_category: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

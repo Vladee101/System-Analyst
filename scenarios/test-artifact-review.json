@@ -1,0 +1,46 @@
+{
+  "scenario_id": "test-artifact-review",
+  "title": "Test: Artifact Review",
+  "level": "Junior",
+  "pack": "testing",
+  "description": "Test artifact_review node type.",
+  "skills_tracked": ["api_design"],
+  "nodes": [
+    {
+      "node_id": "step_1",
+      "node_type": "artifact_review",
+      "stage": "API Contract Review",
+      "context": "Find the error cells in the table.",
+      "context_artifact": {
+        "type": "reviewable_table",
+        "data": {
+          "headers": ["Method", "Path", "Response"],
+          "rows": [
+            {
+              "id": "row_1",
+              "cells": [
+                { "id": "r1_method", "value": "GET", "has_error": false },
+                { "id": "r1_path", "value": "/users", "has_error": false },
+                { "id": "r1_response", "value": "{ password_hash }", "has_error": true }
+              ]
+            }
+          ]
+        }
+      },
+      "requires_flags": [],
+      "excludes": [],
+      "choices": [
+        {
+          "id": "r1_response",
+          "text": "Exposing password hash",
+          "correct": true,
+          "skill_effects": { "api_design": 1.0 },
+          "sets_flags": [],
+          "feedback": "Correct! Passwords should not be returned.",
+          "timeline_event": "Fixed security issue.",
+          "correct_rank": null
+        }
+      ]
+    }
+  ]
+}
