@@ -2,6 +2,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useScenarioStore, Choice } from "../store/useScenarioStore";
 import { Mermaid } from "../components/Mermaid";
+import { AdrArtifact } from "../components/artifacts/AdrArtifact";
+import { EventSchemaArtifact } from "../components/artifacts/EventSchemaArtifact";
+import { InterfaceStructureArtifact } from "../components/artifacts/InterfaceStructureArtifact";
+import { JourneyMapArtifact } from "../components/artifacts/JourneyMapArtifact";
 import { ArrowUp, ArrowDown, ChevronUp, ChevronDown, Clock, ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -437,6 +441,26 @@ export function ScenarioWorkspace() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* ADR Renderer */}
+            {currentNode?.context_artifact?.type === 'adr' && currentNode.context_artifact.data && (
+              <AdrArtifact data={currentNode.context_artifact.data} />
+            )}
+
+            {/* Event Schema Renderer */}
+            {currentNode?.context_artifact?.type === 'event_schema' && currentNode.context_artifact.data && (
+              <EventSchemaArtifact data={currentNode.context_artifact.data} />
+            )}
+
+            {/* Interface Structure Renderer */}
+            {currentNode?.context_artifact?.type === 'interface_structure' && currentNode.context_artifact.data && (
+              <InterfaceStructureArtifact data={currentNode.context_artifact.data} />
+            )}
+
+            {/* Customer Journey Map Renderer */}
+            {currentNode?.context_artifact?.type === 'journey_map' && currentNode.context_artifact.data && (
+              <JourneyMapArtifact data={currentNode.context_artifact.data} />
             )}
 
             {currentNode?.context_artifact &&
